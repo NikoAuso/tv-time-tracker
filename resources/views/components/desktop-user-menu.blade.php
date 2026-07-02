@@ -20,20 +20,16 @@
         <flux:menu.separator />
         <flux:menu.radio.group>
             <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
-                {{ __('Settings') }}
+                {{ __('Impostazioni') }}
             </flux:menu.item>
-            <form method="POST" action="{{ route('logout') }}" class="w-full">
-                @csrf
-                <flux:menu.item
-                    as="button"
-                    type="submit"
-                    icon="arrow-right-start-on-rectangle"
-                    class="w-full cursor-pointer"
-                    data-test="logout-button"
-                >
-                    {{ __('Log out') }}
-                </flux:menu.item>
-            </form>
+            @if (auth()->user()->hasPin())
+                <form method="POST" action="{{ route('lock') }}" class="w-full">
+                    @csrf
+                    <flux:menu.item as="button" type="submit" icon="lock-closed" class="w-full cursor-pointer">
+                        {{ __('Blocca') }}
+                    </flux:menu.item>
+                </form>
+            @endif
         </flux:menu.radio.group>
     </flux:menu>
 </flux:dropdown>

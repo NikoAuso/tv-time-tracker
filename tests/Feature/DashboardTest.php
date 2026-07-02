@@ -10,18 +10,26 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_the_login_page(): void
+    public function test_the_dashboard_is_accessible(): void
     {
-        $response = $this->get(route('dashboard'));
-        $response->assertRedirect(route('login'));
+        $this->actingAs(User::factory()->create());
+
+        $this->get(route('dashboard'))->assertOk();
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard(): void
+    public function test_a_pin_locks_the_app_until_unlocked(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['pin' => '1234']);
+
         $this->actingAs($user);
 
-        $response = $this->get(route('dashboard'));
-        $response->assertOk();
+        $this->get(route('dashboard'))->assertRedirect(route('unlock'));
+    }
+
+    public function test_unlock_page_is_reachable_while_locked(): void
+    {
+        $this->actingAs(User::factory()->create(['pin' => '1234']));
+
+        $this->get(route('unlock'))->assertOk();
     }
 }
