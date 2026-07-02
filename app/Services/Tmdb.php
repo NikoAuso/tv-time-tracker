@@ -56,4 +56,19 @@ class Tmdb
 
         return $response->ok() ? ($response->json('episodes') ?? []) : [];
     }
+
+    /**
+     * Cerca un film per titolo (e anno se disponibile), restituisce il primo risultato.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function searchMovie(string $title, ?int $year = null): ?array
+    {
+        $response = $this->client()->get('/search/movie', array_filter([
+            'query' => $title,
+            'primary_release_year' => $year,
+        ]));
+
+        return $response->ok() ? ($response->json('results.0') ?: null) : null;
+    }
 }

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Episode;
+use App\Models\Movie;
 use App\Models\Show;
 use App\Models\User;
+use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Console\Attributes\Description;
@@ -63,13 +65,99 @@ class ImportTvTime extends Command
             }
         });
 
+        $movieCounters = $this->importMovies(rtrim((string) $this->argument('path'), '/'), $user);
+
         $this->info("Import completato per l'utente #{$user->id}:");
         $this->table(
-            ['Serie (nuove)', 'In libreria', 'Episodi', 'Visti'],
-            [[$counters['shows'], $counters['library'], $counters['episodes'], $counters['watched']]],
+            ['Serie (nuove)', 'In libreria', 'Episodi', 'Visti', 'Film', 'Film visti', 'Watchlist'],
+            [[
+                $counters['shows'], $counters['library'], $counters['episodes'], $counters['watched'],
+                $movieCounters['movies'], $movieCounters['watched'], $movieCounters['watchlist'],
+            ]],
         );
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Importa i film da tracking-prod-records.csv (identificati da uuid TV Time).
+     *
+     * @return array<string, int>
+     */
+    private function importMovies(string $path, User $user): array
+    {
+        $counters = ['movies' => 0, 'watched' => 0, 'watchlist' => 0];
+        $file = $path.'/tracking-prod-records.csv';
+
+        if (! is_readable($file)) {
+            return $counters;
+        }
+
+        /** @var array<string, Movie> $cache */
+        $cache = [];
+
+        DB::transaction(function () use ($file, $user, &$cache, &$counters): void {
+            foreach ($this->rows($file) as $row) {
+                if (($row['entity_type'] ?? '') !== 'movie') {
+                    continue;
+                }
+                $uuid = $row['uuid'] ?? '';
+                if ($uuid === '') {
+                    continue;
+                }
+
+                if (! isset($cache[$uuid])) {
+                    $cache[$uuid] = Movie::firstOrCreate(
+                        ['tvtime_uuid' => $uuid],
+                        [
+                            'title' => $row['movie_name'] ?: 'Film',
+                            'release_date' => ($row['release_date'] ?? '') ? Carbon::parse($row['release_date']) : null,
+                            'runtime' => ($row['runtime'] ?? '') !== '' ? intdiv((int) $row['runtime'], 60) : null,
+                        ],
+                    );
+                    if ($cache[$uuid]->wasRecentlyCreated) {
+                        $counters['movies']++;
+                    }
+                }
+                $movie = $cache[$uuid];
+
+                match ($row['type'] ?? '') {
+                    'watch' => $this->markMovieWatched($user, $movie, $counters),
+                    'towatch' => $this->markMovieWatchlist($user, $movie, $counters),
+                    default => null,
+                };
+            }
+        });
+
+        return $counters;
+    }
+
+    /**
+     * @param  array<string, int>  $counters
+     */
+    private function markMovieWatched(User $user, Movie $movie, array &$counters): void
+    {
+        $entry = UserMovie::updateOrCreate(
+            ['user_id' => $user->id, 'movie_id' => $movie->id],
+            ['status' => 'watched'],
+        );
+        if ($entry->wasRecentlyCreated) {
+            $counters['watched']++;
+        }
+    }
+
+    /**
+     * @param  array<string, int>  $counters
+     */
+    private function markMovieWatchlist(User $user, Movie $movie, array &$counters): void
+    {
+        $entry = UserMovie::firstOrCreate(
+            ['user_id' => $user->id, 'movie_id' => $movie->id],
+            ['status' => 'watchlist'],
+        );
+        if ($entry->wasRecentlyCreated) {
+            $counters['watchlist']++;
+        }
     }
 
     /**
