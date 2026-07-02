@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Episode;
+use App\Models\User;
 use App\Models\WatchedEpisode;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +20,9 @@ class WatchedEpisodeFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'user_id' => User::factory(),
+            'episode_id' => Episode::factory(),
+            'watched_at' => now(),
         ];
     }
 }

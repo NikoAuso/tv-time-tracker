@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Show;
+use App\Models\User;
 use App\Models\UserShow;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +20,10 @@ class UserShowFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'user_id' => User::factory(),
+            'show_id' => Show::factory(),
+            'status' => 'following',
+            'is_favorite' => false,
         ];
     }
 }

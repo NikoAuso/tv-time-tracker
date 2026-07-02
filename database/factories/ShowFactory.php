@@ -18,7 +18,8 @@ class ShowFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => fake()->unique()->sentence(3),
+            'tvdb_id' => fake()->unique()->numberBetween(1000, 9_999_999),
         ];
     }
 }

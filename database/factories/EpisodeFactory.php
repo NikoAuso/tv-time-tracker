@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Episode;
+use App\Models\Show;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +19,9 @@ class EpisodeFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'show_id' => Show::factory(),
+            'season_number' => 1,
+            'episode_number' => fake()->numberBetween(1, 24),
         ];
     }
 }
