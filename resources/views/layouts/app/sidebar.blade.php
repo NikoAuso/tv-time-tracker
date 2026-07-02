@@ -4,93 +4,65 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 max-lg:hidden">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
-                <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="play" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Da guardare') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="film" :href="route('library')" :current="request()->routeIs('library') || request()->routeIs('shows.*')" wire:navigate>
-                        {{ __('Libreria') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="chart-bar" :href="route('stats')" :current="request()->routeIs('stats')" wire:navigate>
-                        {{ __('Statistiche') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+                <flux:sidebar.item icon="play" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                    {{ __('Da guardare') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="film" :href="route('library')" :current="request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('episodes.*')" wire:navigate>
+                    {{ __('Libreria') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="chart-bar" :href="route('stats')" :current="request()->routeIs('stats')" wire:navigate>
+                    {{ __('Statistiche') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="cog" :href="route('profile.edit')" :current="request()->is('settings*')" wire:navigate>
+                    {{ __('Impostazioni') }}
+                </flux:sidebar.item>
             </flux:sidebar.nav>
 
             <flux:spacer />
 
-            <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
-                </flux:sidebar.item>
-            </flux:sidebar.nav>
-
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
+            <x-desktop-user-menu :name="auth()->user()->name" />
         </flux:sidebar>
 
-        <!-- Mobile User Menu -->
+        {{-- Top bar mobile --}}
         <flux:header class="lg:hidden">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+            <x-app-logo href="{{ route('dashboard') }}" wire:navigate />
 
             <flux:spacer />
 
-            <flux:dropdown position="top" align="end">
-                <flux:profile
-                    :initials="auth()->user()->initials()"
-                    icon-trailing="chevron-down"
-                />
-
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <flux:avatar
-                                    :name="auth()->user()->name"
-                                    :initials="auth()->user()->initials()"
-                                />
-
-                                <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
-                                    <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
-                                </div>
-                            </div>
-                        </div>
-                    </flux:menu.radio.group>
-
-                    <flux:menu.separator />
-
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
-                            {{ __('Settings') }}
-                        </flux:menu.item>
-                    </flux:menu.radio.group>
-
-                    @if (auth()->user()->hasPin())
-                        <flux:menu.separator />
-
-                        <form method="POST" action="{{ route('lock') }}" class="w-full">
-                            @csrf
-                            <flux:menu.item as="button" type="submit" icon="lock-closed" class="w-full cursor-pointer">
-                                {{ __('Blocca') }}
-                            </flux:menu.item>
-                        </form>
-                    @endif
-                </flux:menu>
-            </flux:dropdown>
+            @if (auth()->user()->hasPin())
+                <form method="POST" action="{{ route('lock') }}">
+                    @csrf
+                    <flux:button type="submit" variant="ghost" size="sm" icon="lock-closed" aria-label="{{ __('Blocca') }}" />
+                </form>
+            @endif
         </flux:header>
 
         {{ $slot }}
+
+        {{-- Bottom tab bar mobile --}}
+        <nav class="fixed inset-x-0 bottom-0 z-30 flex border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden dark:border-zinc-700 dark:bg-zinc-900/95">
+            @php
+                $tabs = [
+                    ['dashboard', 'play', 'Da guardare', request()->routeIs('dashboard')],
+                    ['library', 'film', 'Libreria', request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('episodes.*')],
+                    ['stats', 'chart-bar', 'Statistiche', request()->routeIs('stats')],
+                    ['profile.edit', 'cog', 'Impostazioni', request()->is('settings*')],
+                ];
+            @endphp
+            @foreach ($tabs as [$route, $icon, $label, $active])
+                <flux:link :href="route($route)" wire:navigate
+                    class="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] no-underline {{ $active ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}">
+                    <x-dynamic-component :component="'flux::icon.'.$icon" :variant="$active ? 'solid' : 'outline'" class="size-6" />
+                    <span>{{ __($label) }}</span>
+                </flux:link>
+            @endforeach
+        </nav>
 
         @persist('toast')
             <flux:toast.group>
