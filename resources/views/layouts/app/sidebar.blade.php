@@ -12,8 +12,8 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+                    <flux:sidebar.item icon="play" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                        {{ __('Da guardare') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="film" :href="route('library')" :current="request()->routeIs('library') || request()->routeIs('shows.*')" wire:navigate>
                         {{ __('Libreria') }}
