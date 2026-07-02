@@ -23,6 +23,35 @@ new #[Title('Statistiche')] class extends Component {
             ->count();
     }
 
+    #[Computed]
+    public function moviesWatched(): int
+    {
+        return DB::table('user_movies')
+            ->where('user_id', Auth::id())
+            ->where('status', 'watched')
+            ->count();
+    }
+
+    /**
+     * Ore totali stimate: episodi visti + film visti (runtime da TMDB/export).
+     */
+    #[Computed]
+    public function totalHours(): int
+    {
+        $episodeMinutes = (int) DB::table('watched_episodes')
+            ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
+            ->where('watched_episodes.user_id', Auth::id())
+            ->sum('episodes.runtime');
+
+        $movieMinutes = (int) DB::table('user_movies')
+            ->join('movies', 'movies.id', '=', 'user_movies.movie_id')
+            ->where('user_movies.user_id', Auth::id())
+            ->where('user_movies.status', 'watched')
+            ->sum('movies.runtime');
+
+        return intdiv($episodeMinutes + $movieMinutes, 60);
+    }
+
     /**
      * Episodi registrati per mese, con i buchi riempiti a 0.
      *
@@ -90,12 +119,14 @@ new #[Title('Statistiche')] class extends Component {
 <div class="flex flex-col gap-8">
     <flux:heading size="xl">{{ __('Statistiche') }}</flux:heading>
 
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         @foreach ([
             ['Episodi visti', $it($this->episodesWatched)],
+            ['Film visti', $it($this->moviesWatched)],
+            ['Ore totali', $it($this->totalHours)],
             ['Serie seguite', $it($this->showsFollowed)],
             ['Mesi di attività', $it($this->monthsActive())],
-            ['Media al mese', $it($avg)],
+            ['Media ep./mese', $it($avg)],
         ] as [$label, $value])
             <div class="flex flex-col gap-1 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
                 <flux:text size="sm" class="text-zinc-500">{{ __($label) }}</flux:text>

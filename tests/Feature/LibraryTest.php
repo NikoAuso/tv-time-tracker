@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\Episode;
+use App\Models\Movie;
 use App\Models\Show;
 use App\Models\User;
+use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,6 +20,41 @@ it('shows the followed shows in the library', function () {
     $this->actingAs($user)->get(route('library'))
         ->assertOk()
         ->assertSee('House');
+});
+
+it('shows series and movies together, filterable by type', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['name' => 'House']);
+    UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id, 'status' => 'following']);
+    $movie = Movie::factory()->create(['title' => 'Fury']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $movie->id, 'status' => 'watched']);
+
+    Livewire::actingAs($user)->test('pages::library')
+        ->assertSee('House')
+        ->assertSee('Fury')
+        ->set('type', 'movies')
+        ->assertSee('Fury')
+        ->assertDontSee('House')
+        ->set('type', 'series')
+        ->assertSee('House')
+        ->assertDontSee('Fury');
+});
+
+it('separates watched movies from the watchlist', function () {
+    $user = User::factory()->create();
+    $watched = Movie::factory()->create(['title' => 'Fury']);
+    $planned = Movie::factory()->create(['title' => 'Dune']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $watched->id, 'status' => 'watched']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $planned->id, 'status' => 'watchlist']);
+
+    Livewire::actingAs($user)->test('pages::library')
+        ->set('type', 'movies')
+        ->set('status', 'library')
+        ->assertSee('Fury')
+        ->assertDontSee('Dune')
+        ->set('status', 'watchlist')
+        ->assertSee('Dune')
+        ->assertDontSee('Fury');
 });
 
 it('toggles an episode watched state', function () {
