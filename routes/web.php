@@ -9,6 +9,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::livewire('library', 'pages::library')->name('library');
     Route::livewire('shows/{show}', 'pages::show')->name('shows.show');
+    Route::livewire('episodes/{episode}', 'pages::episode')->name('episodes.show');
     Route::livewire('stats', 'pages::stats')->name('stats');
 });
 

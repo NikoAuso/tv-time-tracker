@@ -20,7 +20,7 @@ new class extends Component {
     }
 
     /**
-     * Episodi della serie raggruppati per stagione, con flag "visto".
+     * Episodi raggruppati per stagione, con flag "visto".
      *
      * @return \Illuminate\Support\Collection<int, \Illuminate\Support\Collection<int, Episode>>
      */
@@ -50,6 +50,12 @@ new class extends Component {
             ->count();
     }
 
+    #[Computed]
+    public function totalCount(): int
+    {
+        return $this->show->episodes()->count();
+    }
+
     public function toggle(int $episodeId): void
     {
         $watch = WatchedEpisode::where('user_id', Auth::id())
@@ -66,7 +72,54 @@ new class extends Component {
             ]);
         }
 
-        unset($this->seasons, $this->watchedCount);
+        $this->refreshLists();
+    }
+
+    public function markSeason(int $season): void
+    {
+        $this->markEpisodes(
+            $this->show->episodes()->where('season_number', $season)->pluck('id')
+        );
+    }
+
+    public function markUpTo(int $episodeId): void
+    {
+        $target = Episode::findOrFail($episodeId);
+
+        $ids = $this->show->episodes()
+            ->where(function ($q) use ($target) {
+                $q->where('season_number', '<', $target->season_number)
+                    ->orWhere(fn ($q2) => $q2->where('season_number', $target->season_number)
+                        ->where('episode_number', '<=', $target->episode_number));
+            })
+            ->pluck('id');
+
+        $this->markEpisodes($ids);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, int>  $ids
+     */
+    private function markEpisodes($ids): void
+    {
+        $existing = WatchedEpisode::where('user_id', Auth::id())
+            ->whereIn('episode_id', $ids)
+            ->pluck('episode_id');
+
+        $now = now();
+        $rows = $ids->diff($existing)->map(fn (int $id) => [
+            'user_id' => Auth::id(),
+            'episode_id' => $id,
+            'watched_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        if ($rows !== []) {
+            WatchedEpisode::insert($rows);
+        }
+
+        $this->refreshLists();
     }
 
     public function addEpisode(): void
@@ -88,48 +141,94 @@ new class extends Component {
         );
 
         $this->reset('newSeason', 'newEpisode');
-        unset($this->seasons, $this->watchedCount);
+        $this->refreshLists();
+    }
+
+    private function refreshLists(): void
+    {
+        unset($this->seasons, $this->watchedCount, $this->totalCount);
     }
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <div class="flex items-center gap-2">
-        <flux:button :href="route('library')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
-            {{ __('Libreria') }}
-        </flux:button>
-    </div>
+    <flux:button :href="route('library')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="self-start">
+        {{ __('Libreria') }}
+    </flux:button>
 
-    <div class="flex flex-wrap items-end justify-between gap-4">
-        <div>
+    <div class="flex gap-4">
+        @if ($show->poster_path)
+            <img src="https://image.tmdb.org/t/p/w185{{ $show->poster_path }}" alt="{{ $show->name }}"
+                class="hidden h-40 w-28 shrink-0 rounded-xl object-cover sm:block" />
+        @endif
+        <div class="flex flex-1 flex-col gap-2">
             <flux:heading size="xl">{{ $show->name }}</flux:heading>
-            <flux:text class="text-zinc-500">{{ $this->watchedCount }} {{ __('episodi visti') }}</flux:text>
+            <flux:text class="text-zinc-500">
+                {{ $this->watchedCount }}/{{ $this->totalCount }} {{ __('episodi visti') }}
+            </flux:text>
+            <div class="h-2 max-w-xs overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div class="h-full rounded-full bg-accent"
+                    style="width: {{ $this->totalCount ? round($this->watchedCount / $this->totalCount * 100) : 0 }}%"></div>
+            </div>
+            @if ($show->overview)
+                <flux:text size="sm" class="mt-1 line-clamp-3 text-zinc-500">{{ $show->overview }}</flux:text>
+            @endif
         </div>
     </div>
 
     <flux:separator />
 
-    <form wire:submit="addEpisode" class="flex flex-wrap items-end gap-3">
-        <flux:input wire:model="newSeason" type="number" min="0" :label="__('Stagione')" class="w-28" />
-        <flux:input wire:model="newEpisode" type="number" min="0" :label="__('Episodio')" class="w-28" />
-        <flux:button type="submit" variant="primary" icon="plus">{{ __('Segna visto') }}</flux:button>
-    </form>
-
     @forelse ($this->seasons as $seasonNumber => $episodes)
-        <div class="flex flex-col gap-3">
-            <flux:heading size="lg">{{ __('Stagione') }} {{ $seasonNumber }}</flux:heading>
-            <div class="flex flex-wrap gap-2">
+        @php $seen = $episodes->where('is_watched')->count(); @endphp
+        <div class="flex flex-col gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <flux:heading size="lg">
+                    {{ $seasonNumber == 0 ? __('Speciali') : __('Stagione').' '.$seasonNumber }}
+                    <span class="ml-1 text-sm font-normal text-zinc-500">{{ $seen }}/{{ $episodes->count() }}</span>
+                </flux:heading>
+                @if ($seen < $episodes->count())
+                    <flux:button size="xs" variant="ghost" icon="check"
+                        wire:click="markSeason({{ $seasonNumber }})">{{ __('Segna stagione') }}</flux:button>
+                @endif
+            </div>
+
+            <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
                 @foreach ($episodes as $episode)
-                    <flux:button size="sm" wire:click="toggle({{ $episode->id }})"
-                        :variant="$episode->is_watched ? 'primary' : 'ghost'"
-                        :icon="$episode->is_watched ? 'check' : null">
-                        E{{ $episode->episode_number }}
-                    </flux:button>
+                    <div class="flex items-center gap-3 py-2">
+                        <flux:button size="xs" variant="{{ $episode->is_watched ? 'primary' : 'ghost' }}"
+                            icon="check" wire:click="toggle({{ $episode->id }})"
+                            aria-label="{{ __('Segna visto') }}" />
+
+                        <flux:link :href="route('episodes.show', $episode)" wire:navigate
+                            class="flex min-w-0 flex-1 items-baseline gap-2 no-underline">
+                            <flux:text class="shrink-0 tabular-nums text-zinc-400">{{ $episode->episode_number }}</flux:text>
+                            <flux:text class="truncate {{ $episode->is_watched ? '' : 'font-medium' }}">
+                                {{ $episode->name ?: __('Episodio').' '.$episode->episode_number }}
+                            </flux:text>
+                        </flux:link>
+
+                        @if ($episode->air_date)
+                            <flux:text size="sm" class="shrink-0 tabular-nums text-zinc-400">
+                                {{ $episode->air_date->format('d/m/y') }}
+                            </flux:text>
+                        @endif
+
+                        @unless ($episode->is_watched)
+                            <flux:button size="xs" variant="ghost" wire:click="markUpTo({{ $episode->id }})"
+                                title="{{ __('Segna tutti fino a qui') }}">{{ __('fino a qui') }}</flux:button>
+                        @endunless
+                    </div>
                 @endforeach
             </div>
         </div>
     @empty
-        <flux:text class="py-8 text-center">
-            {{ __('Nessun episodio ancora. I dati completi arriveranno con la sincronizzazione TMDB.') }}
-        </flux:text>
+        <flux:text class="py-8 text-center">{{ __('Nessun episodio disponibile.') }}</flux:text>
     @endforelse
+
+    <flux:separator />
+
+    <form wire:submit="addEpisode" class="flex flex-wrap items-end gap-3">
+        <flux:input wire:model="newSeason" type="number" min="0" :label="__('Stagione')" class="w-24" />
+        <flux:input wire:model="newEpisode" type="number" min="0" :label="__('Episodio')" class="w-24" />
+        <flux:button type="submit" variant="ghost" icon="plus">{{ __('Aggiungi mancante') }}</flux:button>
+    </form>
 </div>
