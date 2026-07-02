@@ -15,6 +15,8 @@ return new class extends Migration
             $table->unsignedInteger('season_number');
             $table->unsignedInteger('episode_number');
             $table->string('name')->nullable();
+            $table->text('overview')->nullable();
+            $table->string('still_path')->nullable();
             $table->date('air_date')->nullable();
             $table->unsignedInteger('runtime')->nullable();
             $table->timestamps();

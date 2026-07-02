@@ -19,12 +19,14 @@ use Illuminate\Support\Carbon;
  * @property int $season_number
  * @property int $episode_number
  * @property string|null $name
+ * @property string|null $overview
+ * @property string|null $still_path
  * @property Carbon|null $air_date
  * @property int|null $runtime
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['show_id', 'tmdb_id', 'season_number', 'episode_number', 'name', 'air_date', 'runtime'])]
+#[Fillable(['show_id', 'tmdb_id', 'season_number', 'episode_number', 'name', 'overview', 'still_path', 'air_date', 'runtime'])]
 class Episode extends Model
 {
     /** @use HasFactory<EpisodeFactory> */

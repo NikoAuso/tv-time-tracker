@@ -106,6 +106,8 @@ class SyncShows extends Command
                     [
                         'tmdb_id' => $episode['id'] ?? null,
                         'name' => $episode['name'] ?? null,
+                        'overview' => $episode['overview'] ?? null,
+                        'still_path' => $episode['still_path'] ?? null,
                         'air_date' => ($episode['air_date'] ?? '') ?: null,
                         'runtime' => $episode['runtime'] ?? null,
                     ],
