@@ -180,6 +180,7 @@ return [
         'storage/framework/sessions',
         'storage/framework/cache',
         'storage/framework/testing',
+        'storage/framework/views/*.php',
         'storage/logs/laravel.log',
     ],
 
