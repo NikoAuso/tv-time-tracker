@@ -1,4 +1,5 @@
 /.phpunit.cache
+/docs/HANDOFF.md
 /node_modules
 /public/build
 /public/fonts-manifest.dev.json
