@@ -46,7 +46,7 @@
         {{ $slot }}
 
         {{-- Bottom tab bar mobile --}}
-        <nav class="fixed inset-x-0 bottom-0 z-30 flex border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden dark:border-zinc-700 dark:bg-zinc-900/95">
+        <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 pb-[max(env(safe-area-inset-bottom),_1.25rem)] backdrop-blur lg:hidden dark:border-zinc-700 dark:bg-zinc-900/95">
             @php
                 $tabs = [
                     ['dashboard', 'play', 'Da guardare', request()->routeIs('dashboard')],
@@ -55,13 +55,15 @@
                     ['profile.edit', 'cog', 'Impostazioni', request()->is('settings*')],
                 ];
             @endphp
-            @foreach ($tabs as [$route, $icon, $label, $active])
-                <flux:link :href="route($route)" wire:navigate
-                    class="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] no-underline {{ $active ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}">
-                    <x-dynamic-component :component="'flux::icon.'.$icon" :variant="$active ? 'solid' : 'outline'" class="size-6" />
-                    <span>{{ __($label) }}</span>
-                </flux:link>
-            @endforeach
+            <div class="grid h-14 grid-cols-4 items-center">
+                @foreach ($tabs as [$route, $icon, $label, $active])
+                    <a href="{{ route($route) }}" wire:navigate
+                        class="flex w-full flex-col items-center justify-center gap-1 text-center text-[11px] no-underline {{ $active ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}">
+                        <x-dynamic-component :component="'flux::icon.'.$icon" :variant="$active ? 'solid' : 'outline'" class="size-6" />
+                        <span>{{ __($label) }}</span>
+                    </a>
+                @endforeach
+            </div>
         </nav>
 
         @persist('toast')
