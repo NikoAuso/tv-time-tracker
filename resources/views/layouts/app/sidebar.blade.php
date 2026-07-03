@@ -30,7 +30,7 @@
         </flux:sidebar>
 
         {{-- Top bar mobile --}}
-        <flux:header class="lg:hidden">
+        <flux:header class="pt-[env(safe-area-inset-top)] lg:hidden">
             <x-app-logo href="{{ route('dashboard') }}" wire:navigate />
 
             <flux:spacer />
