@@ -30,6 +30,35 @@ it('rejects a wrong pin', function () {
     expect(session('pin_unlocked'))->not->toBeTrue();
 });
 
+it('locks out after too many failed attempts', function () {
+    $user = User::factory()->create(['pin' => '1234']);
+
+    $component = Livewire::actingAs($user)->test('pages::unlock');
+
+    foreach (range(1, 5) as $attempt) {
+        $component->set('pin', '0000')->call('unlock')->assertHasErrors('pin');
+    }
+
+    // In lockout anche il PIN corretto viene rifiutato finché la finestra non scade.
+    $component->set('pin', '1234')->call('unlock')->assertHasErrors('pin');
+
+    expect(session('pin_unlocked'))->not->toBeTrue();
+});
+
+it('clears the throttle after a successful unlock', function () {
+    $user = User::factory()->create(['pin' => '1234']);
+
+    $component = Livewire::actingAs($user)->test('pages::unlock');
+
+    foreach (range(1, 3) as $attempt) {
+        $component->set('pin', '0000')->call('unlock')->assertHasErrors('pin');
+    }
+
+    $component->set('pin', '1234')->call('unlock')->assertHasNoErrors();
+
+    expect(session('pin_unlocked'))->toBeTrue();
+});
+
 it('sets a pin from settings', function () {
     $user = User::factory()->create(['pin' => null]);
 

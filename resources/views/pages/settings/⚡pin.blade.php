@@ -46,7 +46,8 @@ new #[Title('PIN')] class extends Component {
             @if (Auth::user()->hasPin())
                 <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
                     <flux:text>{{ __('Un PIN è attivo.') }}</flux:text>
-                    <flux:button size="sm" variant="danger" wire:click="removePin">{{ __('Rimuovi') }}</flux:button>
+                    <flux:button size="sm" variant="danger" wire:click="removePin"
+                        wire:confirm="{{ __('Rimuovere il PIN? L\'app non sarà più bloccata.') }}">{{ __('Rimuovi') }}</flux:button>
                 </div>
             @endif
 

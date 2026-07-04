@@ -2,12 +2,17 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Layout('layouts.auth')] #[Title('Sblocca')] class extends Component {
     public string $pin = '';
+
+    private const MAX_ATTEMPTS = 5;
+
+    private const DECAY_SECONDS = 60;
 
     public function mount(): void
     {
@@ -20,14 +25,28 @@ new #[Layout('layouts.auth')] #[Title('Sblocca')] class extends Component {
     public function unlock(): void
     {
         $user = Auth::user();
+        $key = 'pin-unlock:'.$user?->id;
+
+        $this->resetErrorBag('pin');
+
+        if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
+            $this->addError('pin', __('Troppi tentativi. Riprova tra :seconds secondi.', [
+                'seconds' => RateLimiter::availableIn($key),
+            ]));
+            $this->reset('pin');
+
+            return;
+        }
 
         if ($user?->pin === null || ! Hash::check($this->pin, $user->pin)) {
+            RateLimiter::hit($key, self::DECAY_SECONDS);
             $this->addError('pin', __('PIN errato.'));
             $this->reset('pin');
 
             return;
         }
 
+        RateLimiter::clear($key);
         session(['pin_unlocked' => true]);
         $this->redirectRoute('dashboard', navigate: false);
     }
