@@ -86,7 +86,7 @@ new #[Title('Libreria')] class extends Component {
                 'type' => 'movie',
                 'title' => $um->movie->title,
                 'poster' => $um->movie->poster_path,
-                'href' => null,
+                'href' => route('movies.show', $um->movie),
                 'meta' => $um->movie->release_date?->year ? (string) $um->movie->release_date->year : __('Film'),
             ]);
     }
