@@ -13,44 +13,32 @@ class ProfileUpdateTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
-        $this->actingAs($user = User::factory()->create());
+        $this->actingAs(User::factory()->create());
 
         $this->get(route('profile.edit'))->assertOk();
     }
 
-    public function test_profile_information_can_be_updated(): void
+    public function test_name_can_be_updated(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user);
 
-        $response = Livewire::test('pages::settings.profile')
-            ->set('name', 'Test User')
-            ->set('email', 'test@example.com')
-            ->call('updateProfileInformation');
+        Livewire::test('pages::settings.profile')
+            ->set('name', 'Nuovo Nome')
+            ->call('saveName')
+            ->assertHasNoErrors();
 
-        $response->assertHasNoErrors();
-
-        $user->refresh();
-
-        $this->assertEquals('Test User', $user->name);
-        $this->assertEquals('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertEquals('Nuovo Nome', $user->refresh()->name);
     }
 
-    public function test_email_verification_status_is_unchanged_when_email_address_is_unchanged(): void
+    public function test_name_is_required(): void
     {
-        $user = User::factory()->create();
+        $this->actingAs(User::factory()->create());
 
-        $this->actingAs($user);
-
-        $response = Livewire::test('pages::settings.profile')
-            ->set('name', 'Test User')
-            ->set('email', $user->email)
-            ->call('updateProfileInformation');
-
-        $response->assertHasNoErrors();
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        Livewire::test('pages::settings.profile')
+            ->set('name', '')
+            ->call('saveName')
+            ->assertHasErrors('name');
     }
 }

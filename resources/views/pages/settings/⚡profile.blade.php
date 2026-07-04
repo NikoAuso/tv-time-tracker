@@ -1,120 +1,152 @@
 <?php
 
-use App\Concerns\ProfileValidationRules;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Flux\Flux;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Profile settings')] class extends Component {
-    use ProfileValidationRules;
-
+new #[Title('Profilo')] class extends Component {
     public string $name = '';
-    public string $email = '';
 
-    /**
-     * Mount the component.
-     */
+    public bool $editingName = false;
+
     public function mount(): void
     {
         $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
     }
 
-    /**
-     * Update the profile information for the currently authenticated user.
-     */
-    public function updateProfileInformation(): void
+    public function saveName(): void
     {
+        $validated = $this->validate(['name' => ['required', 'string', 'max:255']]);
+
         $user = Auth::user();
-
-        $validated = $this->validate($this->profileRules($user->id));
-
-        $user->fill($validated);
-
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
-
+        $user->name = $validated['name'];
         $user->save();
 
-        Flux::toast(variant: 'success', text: __('Profile updated.'));
-    }
+        $this->editingName = false;
 
-    /**
-     * Send an email verification notification to the current user.
-     */
-    public function resendVerificationNotification(): void
-    {
-        $user = Auth::user();
-
-        if ($user->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('dashboard', absolute: false));
-
-            return;
-        }
-
-        $user->sendEmailVerificationNotification();
-
-        Session::flash('status', 'verification-link-sent');
+        Flux::toast(variant: 'success', text: __('Profilo aggiornato.'));
     }
 
     #[Computed]
-    public function hasUnverifiedEmail(): bool
+    public function episodes(): int
     {
-        return Auth::user() instanceof MustVerifyEmail && ! Auth::user()->hasVerifiedEmail();
+        return DB::table('watched_episodes')->where('user_id', Auth::id())->count();
     }
 
     #[Computed]
-    public function showDeleteUser(): bool
+    public function movies(): int
     {
-        return ! Auth::user() instanceof MustVerifyEmail
-            || (Auth::user() instanceof MustVerifyEmail && Auth::user()->hasVerifiedEmail());
+        return DB::table('user_movies')->where('user_id', Auth::id())->where('status', 'watched')->count();
+    }
+
+    #[Computed]
+    public function hours(): int
+    {
+        $episodeMinutes = (int) DB::table('watched_episodes')
+            ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
+            ->where('watched_episodes.user_id', Auth::id())
+            ->sum('episodes.runtime');
+
+        $movieMinutes = (int) DB::table('user_movies')
+            ->join('movies', 'movies.id', '=', 'user_movies.movie_id')
+            ->where('user_movies.user_id', Auth::id())
+            ->where('user_movies.status', 'watched')
+            ->sum('movies.runtime');
+
+        return intdiv($episodeMinutes + $movieMinutes, 60);
+    }
+
+    #[Computed]
+    public function memberSince(): ?string
+    {
+        $first = DB::table('watched_episodes')
+            ->where('user_id', Auth::id())
+            ->whereNotNull('watched_at')
+            ->min('watched_at');
+
+        return $first ? Carbon::parse($first)->locale('it')->isoFormat('MMMM YYYY') : null;
     }
 }; ?>
 
 <section class="w-full">
-    @include('partials.settings-heading')
+    @php $it = fn (int $n) => number_format($n, 0, ',', '.'); @endphp
 
-    <flux:heading class="sr-only">{{ __('Profile settings') }}</flux:heading>
+    <div class="my-6 flex w-full max-w-md flex-col gap-8">
+        {{-- Intestazione profilo --}}
+        <div class="flex items-center gap-4">
+            <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent-content text-accent-foreground">
+                <x-app-logo-icon class="size-8 text-white dark:text-black" />
+            </div>
 
-    <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
-        <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
-
-            <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
-
-                @if ($this->hasUnverifiedEmail)
-                    <div>
-                        <flux:text class="mt-4">
-                            {{ __('Your email address is unverified.') }}
-
-                            <flux:link class="text-sm cursor-pointer" wire:click.prevent="resendVerificationNotification">
-                                {{ __('Click here to re-send the verification email.') }}
-                            </flux:link>
-                        </flux:text>
-
-                        @if (session('status') === 'verification-link-sent')
-                            <flux:text class="mt-2 font-medium !dark:text-green-400 !text-green-600">
-                                {{ __('A new verification link has been sent to your email address.') }}
-                            </flux:text>
-                        @endif
-                    </div>
+            <div class="min-w-0 flex-1">
+                @if ($editingName)
+                    <form wire:submit="saveName" class="flex items-center gap-2">
+                        <flux:input wire:model="name" class="flex-1" autofocus />
+                        <flux:button type="submit" variant="primary" size="sm">{{ __('Salva') }}</flux:button>
+                    </form>
+                    <flux:error name="name" />
+                @else
+                    <flux:heading size="lg" class="truncate">{{ $name }}</flux:heading>
+                    <flux:text size="sm" class="text-zinc-500">
+                        {{ $this->memberSince ? __('Dal :date', ['date' => $this->memberSince]) : __('Profilo locale') }}
+                    </flux:text>
                 @endif
             </div>
 
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full" data-test="update-profile-button">
-                        {{ __('Save') }}
-                    </flux:button>
-                </div>
+            @unless ($editingName)
+                <flux:button variant="ghost" size="sm" icon="pencil-square"
+                    wire:click="$set('editingName', true)" aria-label="{{ __('Modifica nome') }}" />
+            @endunless
+        </div>
 
+        {{-- Riepilogo --}}
+        <div class="grid grid-cols-3 divide-x divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+            @foreach ([[__('Episodi'), $this->episodes], [__('Film'), $this->movies], [__('Ore'), $this->hours]] as [$label, $value])
+                <div class="flex flex-col items-center gap-1 p-3">
+                    <flux:heading class="tabular-nums">{{ $it($value) }}</flux:heading>
+                    <flux:text size="sm" class="text-zinc-500">{{ $label }}</flux:text>
+                </div>
+            @endforeach
+        </div>
+
+        {{-- Gestione --}}
+        <div class="flex flex-col gap-2">
+            <flux:text class="px-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">{{ __('Gestione') }}</flux:text>
+
+            <div class="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
+                <a href="{{ route('pin.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
+                    <flux:icon.lock-closed class="size-5 shrink-0 text-zinc-500" />
+                    <flux:text class="flex-1 font-medium">{{ __('Blocco con PIN') }}</flux:text>
+                    @if (Auth::user()->hasPin())
+                        <flux:badge size="sm" color="green">{{ __('Attivo') }}</flux:badge>
+                    @else
+                        <flux:text size="sm" class="text-zinc-400">{{ __('Off') }}</flux:text>
+                    @endif
+                    <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
+                </a>
+
+                <a href="{{ route('import.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
+                    <flux:icon.arrow-up-tray class="size-5 shrink-0 text-zinc-500" />
+                    <div class="flex min-w-0 flex-1 flex-col">
+                        <flux:text class="font-medium">{{ __('Importa dati') }}</flux:text>
+                        <flux:text size="sm" class="text-zinc-500">{{ __('Da export TV Time') }}</flux:text>
+                    </div>
+                    <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
+                </a>
+
+                <a href="{{ route('appearance.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
+                    <flux:icon.swatch class="size-5 shrink-0 text-zinc-500" />
+                    <div class="flex min-w-0 flex-1 flex-col">
+                        <flux:text class="font-medium">{{ __('Aspetto') }}</flux:text>
+                        <flux:text size="sm" class="text-zinc-500">{{ __('Chiaro · Scuro · Sistema') }}</flux:text>
+                    </div>
+                    <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
+                </a>
             </div>
-        </form>
-    </x-pages::settings.layout>
+        </div>
+    </div>
 </section>

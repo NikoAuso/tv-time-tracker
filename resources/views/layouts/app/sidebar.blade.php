@@ -22,8 +22,8 @@
                 <flux:sidebar.item icon="chart-bar" :href="route('stats')" :current="request()->routeIs('stats')" wire:navigate>
                     {{ __('Statistiche') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="cog" :href="route('profile.edit')" :current="request()->is('settings*')" wire:navigate>
-                    {{ __('Impostazioni') }}
+                <flux:sidebar.item icon="user" :href="route('profile.edit')" :current="request()->is('settings*')" wire:navigate>
+                    {{ __('Profilo') }}
                 </flux:sidebar.item>
             </flux:sidebar.nav>
 
@@ -56,7 +56,7 @@
                     ['library', 'film', 'Libreria', request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('movies.*') || request()->routeIs('episodes.*')],
                     ['lists', 'list-bullet', 'Liste', request()->routeIs('lists') || request()->routeIs('lists.*')],
                     ['stats', 'chart-bar', 'Statistiche', request()->routeIs('stats')],
-                    ['profile.edit', 'cog', 'Impostazioni', request()->is('settings*')],
+                    ['profile.edit', 'user', 'Profilo', request()->is('settings*')],
                 ];
             @endphp
             <div class="grid h-14 grid-cols-5 items-center">

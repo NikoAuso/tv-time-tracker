@@ -1,17 +1,10 @@
-<div class="flex items-start max-md:flex-col">
-    <div class="me-10 w-full pb-4 md:w-[220px]">
-        <flux:navlist aria-label="{{ __('Settings') }}">
-            <flux:navlist.item :href="route('profile.edit')" wire:navigate>{{ __('Profilo') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('pin.edit')" wire:navigate>{{ __('PIN') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('import.edit')" wire:navigate>{{ __('Import') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Aspetto') }}</flux:navlist.item>
-        </flux:navlist>
-    </div>
+<div class="flex w-full flex-col gap-2">
+    <flux:button :href="route('profile.edit')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="self-start">
+        {{ __('Profilo') }}
+    </flux:button>
 
-    <flux:separator class="md:hidden" />
-
-    <div class="flex-1 self-stretch max-md:pt-6">
-        <flux:heading>{{ $heading ?? '' }}</flux:heading>
+    <div class="mt-2">
+        <flux:heading size="xl">{{ $heading ?? '' }}</flux:heading>
         <flux:subheading>{{ $subheading ?? '' }}</flux:subheading>
 
         <div class="mt-5 w-full max-w-lg">

@@ -39,8 +39,6 @@ new #[Title('PIN')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    @include('partials.settings-heading')
-
     <x-pages::settings.layout :heading="__('PIN')" :subheading="__('Blocco locale dell\'app (opzionale)')">
         <div class="my-6 flex w-full max-w-sm flex-col gap-6">
             @if (Auth::user()->hasPin())

@@ -101,8 +101,6 @@ new #[Title('Import')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    @include('partials.settings-heading')
-
     <x-pages::settings.layout :heading="__('Import')" :subheading="__('Importa i tuoi dati dall\'export di TV Time')">
         <div class="my-6 flex w-full max-w-md flex-col gap-8">
             <div class="flex flex-col gap-4">
