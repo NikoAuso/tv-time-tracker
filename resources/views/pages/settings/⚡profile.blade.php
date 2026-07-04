@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\UserList;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,10 @@ new #[Title('Profilo')] class extends Component {
     public string $name = '';
 
     public bool $editingName = false;
+
+    public string $newListName = '';
+
+    public bool $creatingList = false;
 
     public function mount(): void
     {
@@ -31,33 +36,84 @@ new #[Title('Profilo')] class extends Component {
         Flux::toast(variant: 'success', text: __('Profilo aggiornato.'));
     }
 
-    #[Computed]
-    public function episodes(): int
+    public function createList(): void
     {
-        return DB::table('watched_episodes')->where('user_id', Auth::id())->count();
+        $validated = $this->validate(
+            ['newListName' => ['required', 'string', 'max:60']],
+            ['newListName.required' => __('Dai un nome alla lista.')],
+        );
+
+        UserList::firstOrCreate([
+            'user_id' => Auth::id(),
+            'name' => trim($validated['newListName']),
+        ]);
+
+        $this->reset('newListName', 'creatingList');
+        unset($this->lists);
     }
 
+    /**
+     * @return list<array{value: int, unit: string}>
+     */
     #[Computed]
-    public function movies(): int
+    public function seriesParts(): array
     {
-        return DB::table('user_movies')->where('user_id', Auth::id())->where('status', 'watched')->count();
-    }
-
-    #[Computed]
-    public function hours(): int
-    {
-        $episodeMinutes = (int) DB::table('watched_episodes')
+        return $this->humanParts((int) DB::table('watched_episodes')
             ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
             ->where('watched_episodes.user_id', Auth::id())
-            ->sum('episodes.runtime');
+            ->sum('episodes.runtime'));
+    }
 
-        $movieMinutes = (int) DB::table('user_movies')
+    /**
+     * @return list<array{value: int, unit: string}>
+     */
+    #[Computed]
+    public function movieParts(): array
+    {
+        return $this->humanParts((int) DB::table('user_movies')
             ->join('movies', 'movies.id', '=', 'user_movies.movie_id')
             ->where('user_movies.user_id', Auth::id())
             ->where('user_movies.status', 'watched')
-            ->sum('movies.runtime');
+            ->sum('movies.runtime'));
+    }
 
-        return intdiv($episodeMinutes + $movieMinutes, 60);
+    /**
+     * Minuti scomposti in mesi/giorni/ore (mese = 30 giorni).
+     *
+     * @return list<array{value: int, unit: string}>
+     */
+    private function humanParts(int $minutes): array
+    {
+        $hours = intdiv($minutes, 60);
+        $months = intdiv($hours, 720);
+        $days = intdiv($hours % 720, 24);
+        $h = $hours % 24;
+
+        $parts = [];
+        if ($months > 0) {
+            $parts[] = ['value' => $months, 'unit' => $months === 1 ? __('mese') : __('mesi')];
+        }
+        if ($days > 0) {
+            $parts[] = ['value' => $days, 'unit' => $days === 1 ? __('giorno') : __('giorni')];
+        }
+        if ($h > 0 || $parts === []) {
+            $parts[] = ['value' => $h, 'unit' => $h === 1 ? __('ora') : __('ore')];
+        }
+
+        return $parts;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, UserList>
+     */
+    #[Computed]
+    public function lists()
+    {
+        return UserList::where('user_id', Auth::id())
+            ->withCount(['shows', 'movies'])
+            ->latest('id')
+            ->take(5)
+            ->get();
     }
 
     #[Computed]
@@ -73,8 +129,6 @@ new #[Title('Profilo')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    @php $it = fn (int $n) => number_format($n, 0, ',', '.'); @endphp
-
     <div class="my-6 flex w-full max-w-md flex-col gap-8">
         {{-- Intestazione profilo --}}
         <div class="flex items-center gap-4">
@@ -103,14 +157,61 @@ new #[Title('Profilo')] class extends Component {
             @endunless
         </div>
 
-        {{-- Riepilogo --}}
-        <div class="grid grid-cols-3 divide-x divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
-            @foreach ([[__('Episodi'), $this->episodes], [__('Film'), $this->movies], [__('Ore'), $this->hours]] as [$label, $value])
-                <div class="flex flex-col items-center gap-1 p-3">
-                    <flux:heading class="tabular-nums">{{ $it($value) }}</flux:heading>
+        {{-- Riepilogo tempo --}}
+        <div class="grid grid-cols-2 divide-x divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+            @foreach ([[__('Tempo serie'), $this->seriesParts], [__('Tempo film'), $this->movieParts]] as [$label, $parts])
+                <div class="flex flex-col items-center gap-3 p-4 text-center">
                     <flux:text size="sm" class="text-zinc-500">{{ $label }}</flux:text>
+                    <div class="flex items-start justify-center gap-3">
+                        @foreach ($parts as $part)
+                            <div class="flex flex-col items-center">
+                                <span class="text-xl font-bold leading-none tabular-nums">{{ $part['value'] }}</span>
+                                <span class="mt-1 text-xs text-zinc-500">{{ $part['unit'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             @endforeach
+        </div>
+
+        {{-- Liste --}}
+        <div class="flex flex-col gap-2">
+            <flux:text class="px-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">{{ __('Liste') }}</flux:text>
+
+            @if ($this->lists->isNotEmpty())
+                <div class="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
+                    @foreach ($this->lists as $list)
+                        <a href="{{ route('lists.show', $list) }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
+                            <flux:icon.list-bullet class="size-5 shrink-0 text-zinc-500" />
+                            <flux:text class="flex-1 truncate font-medium">{{ $list->name }}</flux:text>
+                            <flux:text size="sm" class="shrink-0 text-zinc-500">
+                                {{ $list->shows_count + $list->movies_count }} {{ __('elementi') }}
+                            </flux:text>
+                            <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+
+            @if ($creatingList)
+                <form wire:submit="createList" class="flex items-start gap-2">
+                    <div class="flex flex-1 flex-col gap-1">
+                        <flux:input wire:model="newListName" placeholder="{{ __('Nome della lista') }}" autofocus />
+                        <flux:error name="newListName" />
+                    </div>
+                    <flux:button type="submit" variant="primary" icon="check" aria-label="{{ __('Crea') }}" />
+                    <flux:button type="button" variant="ghost" icon="x-mark"
+                        wire:click="$set('creatingList', false)" aria-label="{{ __('Annulla') }}" />
+                </form>
+            @elseif ($this->lists->isEmpty())
+                <flux:button variant="primary" class="w-full" icon="plus" wire:click="$set('creatingList', true)">
+                    {{ __('Crea una lista') }}
+                </flux:button>
+            @else
+                <flux:button variant="ghost" size="sm" icon="plus" class="self-start" wire:click="$set('creatingList', true)">
+                    {{ __('Nuova lista') }}
+                </flux:button>
+            @endif
         </div>
 
         {{-- Gestione --}}

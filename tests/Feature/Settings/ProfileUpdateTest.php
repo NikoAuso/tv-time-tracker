@@ -3,6 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\User;
+use App\Models\UserList;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -40,5 +41,21 @@ class ProfileUpdateTest extends TestCase
             ->set('name', '')
             ->call('saveName')
             ->assertHasErrors('name');
+    }
+
+    public function test_a_list_can_be_created_from_the_profile(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::settings.profile')
+            ->set('newListName', 'Preferiti')
+            ->call('createList')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(
+            UserList::where('user_id', $user->id)->where('name', 'Preferiti')->exists()
+        );
     }
 }
