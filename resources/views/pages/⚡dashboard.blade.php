@@ -23,13 +23,13 @@ new #[Title('Da guardare')] class extends Component {
             ->where('status', 'following')
             ->pluck('show_id');
 
-        $watchedIds = WatchedEpisode::where('user_id', $userId)->pluck('episode_id');
-
+        // NOT EXISTS invece di whereNotIn(watchedIds): evita di caricare e bindare
+        // migliaia di id (oltre il limite di variabili di SQLite) a ogni render.
         return Episode::query()
             ->with('show')
             ->whereIn('show_id', $showIds)
             ->where('season_number', '>=', 1)
-            ->whereNotIn('id', $watchedIds)
+            ->whereDoesntHave('watches', fn ($q) => $q->where('user_id', $userId))
             ->where(fn ($q) => $q->whereNull('air_date')->orWhereDate('air_date', '<=', now()))
             ->orderBy('show_id')
             ->orderBy('season_number')
