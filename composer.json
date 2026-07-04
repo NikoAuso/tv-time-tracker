@@ -1,11 +1,14 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "nikoauso/tv-time-tracker",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Personal on-device (Android/NativePHP) TV and movie tracker in the style of TV Time.",
     "keywords": [
         "laravel",
-        "framework"
+        "livewire",
+        "nativephp",
+        "tv",
+        "tracker"
     ],
     "license": "MIT",
     "require": {
