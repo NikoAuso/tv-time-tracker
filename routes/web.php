@@ -19,6 +19,8 @@ Route::middleware(['pin'])->group(function () {
     Route::livewire('shows/{show}', 'pages::show')->name('shows.show');
     Route::livewire('movies/{movie}', 'pages::movie')->name('movies.show');
     Route::livewire('episodes/{episode}', 'pages::episode')->name('episodes.show');
+    Route::livewire('lists', 'pages::lists')->name('lists');
+    Route::livewire('lists/{userList}', 'pages::list')->name('lists.show');
     Route::livewire('stats', 'pages::stats')->name('stats');
 });
 

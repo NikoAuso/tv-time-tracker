@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Movie;
+use App\Models\UserList;
 use App\Models\UserMovie;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -60,6 +61,31 @@ new class extends Component {
 
         unset($this->entry);
     }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, UserList>
+     */
+    #[Computed]
+    public function userLists()
+    {
+        return UserList::where('user_id', Auth::id())->orderBy('name')->get();
+    }
+
+    /**
+     * @return list<int>
+     */
+    #[Computed]
+    public function listIds(): array
+    {
+        return $this->movie->lists()->pluck('user_lists.id')->all();
+    }
+
+    public function toggleList(int $listId): void
+    {
+        $this->movie->lists()->toggle($listId);
+
+        unset($this->listIds);
+    }
 }; ?>
 
 <div class="flex max-w-2xl flex-col gap-6">
@@ -105,8 +131,9 @@ new class extends Component {
                 @endif
             </div>
 
-            <div class="mt-1">
+            <div class="mt-1 flex flex-wrap items-center gap-4">
                 @include('partials.star-rating', ['rating' => $this->entry?->rating])
+                @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
             </div>
         </div>
     </div>

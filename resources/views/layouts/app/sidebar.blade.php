@@ -13,8 +13,11 @@
                 <flux:sidebar.item icon="play" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Da guardare') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="film" :href="route('library')" :current="request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('episodes.*')" wire:navigate>
+                <flux:sidebar.item icon="film" :href="route('library')" :current="request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('movies.*') || request()->routeIs('episodes.*')" wire:navigate>
                     {{ __('Libreria') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="list-bullet" :href="route('lists')" :current="request()->routeIs('lists') || request()->routeIs('lists.*')" wire:navigate>
+                    {{ __('Liste') }}
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="chart-bar" :href="route('stats')" :current="request()->routeIs('stats')" wire:navigate>
                     {{ __('Statistiche') }}
@@ -50,12 +53,13 @@
             @php
                 $tabs = [
                     ['dashboard', 'play', 'Da guardare', request()->routeIs('dashboard')],
-                    ['library', 'film', 'Libreria', request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('episodes.*')],
+                    ['library', 'film', 'Libreria', request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('movies.*') || request()->routeIs('episodes.*')],
+                    ['lists', 'list-bullet', 'Liste', request()->routeIs('lists') || request()->routeIs('lists.*')],
                     ['stats', 'chart-bar', 'Statistiche', request()->routeIs('stats')],
                     ['profile.edit', 'cog', 'Impostazioni', request()->is('settings*')],
                 ];
             @endphp
-            <div class="grid h-14 grid-cols-4 items-center">
+            <div class="grid h-14 grid-cols-5 items-center">
                 @foreach ($tabs as [$route, $icon, $label, $active])
                     <a href="{{ route($route) }}" wire:navigate
                         class="flex w-full flex-col items-center justify-center gap-1 text-center text-[11px] no-underline {{ $active ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}">

@@ -2,6 +2,7 @@
 
 use App\Models\Episode;
 use App\Models\Show;
+use App\Models\UserList;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,31 @@ new class extends Component {
         );
 
         unset($this->userShow);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, UserList>
+     */
+    #[Computed]
+    public function userLists()
+    {
+        return UserList::where('user_id', Auth::id())->orderBy('name')->get();
+    }
+
+    /**
+     * @return list<int>
+     */
+    #[Computed]
+    public function listIds(): array
+    {
+        return $this->show->lists()->pluck('user_lists.id')->all();
+    }
+
+    public function toggleList(int $listId): void
+    {
+        $this->show->lists()->toggle($listId);
+
+        unset($this->listIds);
     }
 
     /**
@@ -188,8 +214,9 @@ new class extends Component {
                 <div class="h-full rounded-full bg-accent"
                     style="width: {{ $this->totalCount ? round($this->watchedCount / $this->totalCount * 100) : 0 }}%"></div>
             </div>
-            <div class="mt-1">
+            <div class="mt-1 flex flex-wrap items-center gap-4">
                 @include('partials.star-rating', ['rating' => $this->userShow?->rating])
+                @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
             </div>
             @if ($show->overview)
                 <flux:text size="sm" class="mt-1 line-clamp-3 text-zinc-500">{{ $show->overview }}</flux:text>

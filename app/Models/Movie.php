@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -33,6 +34,12 @@ class Movie extends Model
     public function userEntries(): HasMany
     {
         return $this->hasMany(UserMovie::class);
+    }
+
+    /** @return MorphToMany<UserList, $this> */
+    public function lists(): MorphToMany
+    {
+        return $this->morphToMany(UserList::class, 'listable', 'list_items', 'listable_id', 'user_list_id')->withTimestamps();
     }
 
     /**
