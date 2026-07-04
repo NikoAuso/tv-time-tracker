@@ -217,7 +217,17 @@ class ImportTvTime extends Command
     private function rows(string $file): \Generator
     {
         $handle = fopen($file, 'r');
+        if ($handle === false) {
+            throw new \RuntimeException("Impossibile aprire il file CSV: {$file}");
+        }
+
         $header = fgetcsv($handle);
+        if ($header === false) {
+            fclose($handle);
+
+            return;
+        }
+        $header = array_map(fn ($column): string => (string) $column, $header);
 
         while (($data = fgetcsv($handle)) !== false) {
             /** @var array<string, string> $row */
