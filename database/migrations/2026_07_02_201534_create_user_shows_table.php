@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignId('show_id')->constrained()->cascadeOnDelete();
             $table->string('status')->default('following');
             $table->boolean('is_favorite')->default(false);
+            $table->unsignedTinyInteger('rating')->nullable();
             $table->timestamp('followed_at')->nullable();
             $table->timestamps();
 

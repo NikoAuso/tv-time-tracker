@@ -50,6 +50,16 @@ new class extends Component {
 
         unset($this->entry);
     }
+
+    public function rate(int $stars): void
+    {
+        UserMovie::updateOrCreate(
+            ['user_id' => Auth::id(), 'movie_id' => $this->movie->id],
+            ['rating' => $stars >= 1 ? min($stars, 5) : null],
+        );
+
+        unset($this->entry);
+    }
 }; ?>
 
 <div class="flex max-w-2xl flex-col gap-6">
@@ -93,6 +103,10 @@ new class extends Component {
                     <flux:button wire:click="remove" variant="ghost" size="sm"
                         wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
+            </div>
+
+            <div class="mt-1">
+                @include('partials.star-rating', ['rating' => $this->entry?->rating])
             </div>
         </div>
     </div>

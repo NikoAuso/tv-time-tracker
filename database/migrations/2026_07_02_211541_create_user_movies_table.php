@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('status')->default('watched');
             $table->timestamp('watched_at')->nullable();
             $table->unsignedInteger('rewatch_count')->default(0);
+            $table->unsignedTinyInteger('rating')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'movie_id']);

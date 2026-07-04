@@ -18,10 +18,11 @@ use Illuminate\Support\Carbon;
  * @property string $status
  * @property Carbon|null $watched_at
  * @property int $rewatch_count
+ * @property int|null $rating
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'movie_id', 'status', 'watched_at', 'rewatch_count'])]
+#[Fillable(['user_id', 'movie_id', 'status', 'watched_at', 'rewatch_count', 'rating'])]
 class UserMovie extends Model
 {
     /** @use HasFactory<UserMovieFactory> */
@@ -47,6 +48,7 @@ class UserMovie extends Model
         return [
             'watched_at' => 'datetime',
             'rewatch_count' => 'integer',
+            'rating' => 'integer',
         ];
     }
 }

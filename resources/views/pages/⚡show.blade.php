@@ -2,6 +2,7 @@
 
 use App\Models\Episode;
 use App\Models\Show;
+use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -17,6 +18,24 @@ new class extends Component {
     public function mount(Show $show): void
     {
         $this->show = $show;
+    }
+
+    #[Computed]
+    public function userShow(): ?UserShow
+    {
+        return UserShow::where('user_id', Auth::id())
+            ->where('show_id', $this->show->id)
+            ->first();
+    }
+
+    public function rate(int $stars): void
+    {
+        UserShow::updateOrCreate(
+            ['user_id' => Auth::id(), 'show_id' => $this->show->id],
+            ['rating' => $stars >= 1 ? min($stars, 5) : null],
+        );
+
+        unset($this->userShow);
     }
 
     /**
@@ -168,6 +187,9 @@ new class extends Component {
             <div class="h-2 max-w-xs overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                 <div class="h-full rounded-full bg-accent"
                     style="width: {{ $this->totalCount ? round($this->watchedCount / $this->totalCount * 100) : 0 }}%"></div>
+            </div>
+            <div class="mt-1">
+                @include('partials.star-rating', ['rating' => $this->userShow?->rating])
             </div>
             @if ($show->overview)
                 <flux:text size="sm" class="mt-1 line-clamp-3 text-zinc-500">{{ $show->overview }}</flux:text>

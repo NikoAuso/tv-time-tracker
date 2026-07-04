@@ -17,11 +17,12 @@ use Illuminate\Support\Carbon;
  * @property int $show_id
  * @property string $status
  * @property bool $is_favorite
+ * @property int|null $rating
  * @property Carbon|null $followed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'show_id', 'status', 'is_favorite', 'followed_at'])]
+#[Fillable(['user_id', 'show_id', 'status', 'is_favorite', 'rating', 'followed_at'])]
 class UserShow extends Model
 {
     /** @use HasFactory<UserShowFactory> */
@@ -46,6 +47,7 @@ class UserShow extends Model
     {
         return [
             'is_favorite' => 'boolean',
+            'rating' => 'integer',
             'followed_at' => 'datetime',
         ];
     }
