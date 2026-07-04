@@ -54,6 +54,13 @@ new class extends Component {
 
         unset($this->items);
     }
+
+    public function delete(): void
+    {
+        $this->userList->delete();
+
+        $this->redirectRoute('lists', navigate: true);
+    }
 }; ?>
 
 <div class="flex flex-col gap-6">
@@ -61,7 +68,13 @@ new class extends Component {
         {{ __('Liste') }}
     </flux:button>
 
-    <flux:heading size="xl">{{ $userList->name }}</flux:heading>
+    <div class="flex items-center justify-between gap-3">
+        <flux:heading size="xl" class="truncate">{{ $userList->name }}</flux:heading>
+        <flux:button variant="ghost" size="sm" icon="trash" class="shrink-0"
+            wire:click="delete"
+            wire:confirm="{{ __('Eliminare la lista «:name»?', ['name' => $userList->name]) }}"
+            aria-label="{{ __('Elimina lista') }}" />
+    </div>
 
     @if ($this->items->isEmpty())
         <flux:text class="py-12 text-center text-zinc-500">

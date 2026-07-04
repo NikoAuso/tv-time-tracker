@@ -96,3 +96,14 @@ it('removes an item from the list detail page', function () {
 
     expect($list->shows()->count())->toBe(0);
 });
+
+it('deletes the list from its detail page', function () {
+    $user = User::factory()->create();
+    $list = UserList::factory()->create(['user_id' => $user->id]);
+
+    Livewire::actingAs($user)->test('pages::list', ['userList' => $list])
+        ->call('delete')
+        ->assertRedirect(route('lists'));
+
+    expect(UserList::whereKey($list->id)->exists())->toBeFalse();
+});
