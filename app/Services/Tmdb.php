@@ -11,12 +11,15 @@ class Tmdb
 {
     private const BASE = 'https://api.themoviedb.org/3';
 
+    private const LANGUAGE = 'it-IT';
+
     public function __construct(private readonly ?string $token = null) {}
 
     private function client(): PendingRequest
     {
         return Http::baseUrl(self::BASE)
             ->withToken($this->token ?? (string) config('services.tmdb.token'))
+            ->withQueryParameters(['language' => self::LANGUAGE])
             ->acceptJson()
             ->retry(2, 200);
     }

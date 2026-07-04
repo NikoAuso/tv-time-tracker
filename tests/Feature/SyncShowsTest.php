@@ -16,7 +16,7 @@ it('enriches a show and imports its full episode list from TMDB', function () {
             ['id' => 501, 'episode_number' => 1, 'name' => 'Pilot', 'air_date' => '2004-11-16', 'runtime' => 44],
             ['id' => 502, 'episode_number' => 2, 'name' => 'Paternity', 'air_date' => '2004-11-23', 'runtime' => 43],
         ]]),
-        'https://api.themoviedb.org/3/tv/1408' => Http::response([
+        'https://api.themoviedb.org/3/tv/1408*' => Http::response([
             'id' => 1408,
             'name' => 'House',
             'poster_path' => '/house.jpg',
