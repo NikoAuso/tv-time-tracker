@@ -61,6 +61,33 @@ it('runs the tmdb sync after import when a token is configured', function () {
     Http::assertSent(fn ($request) => str_contains($request->url(), 'themoviedb.org'));
 });
 
+it('saves a per-user tmdb token', function () {
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::settings.import')
+        ->set('tmdbToken', 'a-fake-tmdb-read-access-token')
+        ->call('saveToken')
+        ->assertHasNoErrors();
+
+    expect($user->fresh()->tmdb_token)->toBe('a-fake-tmdb-read-access-token');
+});
+
+it('syncs using the per-user token when no config token is set', function () {
+    config(['services.tmdb.token' => null]);
+    Http::fake(['*' => Http::response([], 200)]);
+
+    $user = User::factory()->create();
+    $user->tmdb_token = 'a-fake-tmdb-read-access-token';
+    $user->save();
+
+    Livewire::actingAs($user)->test('pages::settings.import')
+        ->set('archive', exportZip(['tracking-prod-records-v2.csv' => recordsCsv()]))
+        ->call('import')
+        ->assertHasNoErrors();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'themoviedb.org'));
+});
+
 it('rejects a zip without the records file', function () {
     $user = User::factory()->create();
 

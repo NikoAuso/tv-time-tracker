@@ -13,6 +13,30 @@ new #[Title('Import')] class extends Component {
 
     public $archive;
 
+    public string $tmdbToken = '';
+
+    public function saveToken(): void
+    {
+        $validated = $this->validate(['tmdbToken' => ['required', 'string', 'min:20']]);
+
+        $user = Auth::user();
+        $user->tmdb_token = trim($validated['tmdbToken']);
+        $user->save();
+
+        $this->reset('tmdbToken');
+
+        Flux::toast(variant: 'success', text: __('Token TMDB salvato.'));
+    }
+
+    public function removeToken(): void
+    {
+        $user = Auth::user();
+        $user->tmdb_token = null;
+        $user->save();
+
+        Flux::toast(text: __('Token TMDB rimosso.'));
+    }
+
     public function import(): void
     {
         $this->validate([
@@ -55,12 +79,15 @@ new #[Title('Import')] class extends Component {
         $this->cleanup($dir);
         $this->reset('archive');
 
-        if (filled(config('services.tmdb.token'))) {
+        $token = Auth::user()->tmdb_token ?: (string) config('services.tmdb.token');
+
+        if (filled($token)) {
+            config(['services.tmdb.token' => $token]);
             Artisan::call('shows:sync');
             Artisan::call('movies:sync');
             Flux::toast(variant: 'success', text: __('Import e sincronizzazione TMDB completati.'));
         } else {
-            Flux::toast(variant: 'success', text: __('Import completato. Aggiungi TMDB_TOKEN per poster e trame.'));
+            Flux::toast(variant: 'success', text: __('Import completato. Imposta un token TMDB per poster e trame.'));
         }
     }
 
@@ -77,9 +104,35 @@ new #[Title('Import')] class extends Component {
     @include('partials.settings-heading')
 
     <x-pages::settings.layout :heading="__('Import')" :subheading="__('Importa i tuoi dati dall\'export di TV Time')">
-        <div class="my-6 flex w-full max-w-md flex-col gap-6">
+        <div class="my-6 flex w-full max-w-md flex-col gap-8">
+            <div class="flex flex-col gap-4">
+                <div>
+                    <flux:heading size="sm">{{ __('Token TMDB') }}</flux:heading>
+                    <flux:text size="sm" class="text-zinc-500">
+                        {{ __('Serve per scaricare poster e trame. Prendi un Read Access Token (v4) su themoviedb.org.') }}
+                    </flux:text>
+                </div>
+
+                @if (Auth::user()->hasTmdbToken())
+                    <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                        <flux:text>{{ __('Un token è attivo.') }}</flux:text>
+                        <flux:button size="sm" variant="danger" wire:click="removeToken"
+                            wire:confirm="{{ __('Rimuovere il token TMDB?') }}">{{ __('Rimuovi') }}</flux:button>
+                    </div>
+                @endif
+
+                <form wire:submit="saveToken" class="flex flex-col gap-3">
+                    <flux:input wire:model="tmdbToken" type="password"
+                        :label="Auth::user()->hasTmdbToken() ? __('Nuovo token') : __('Token')" />
+                    <flux:error name="tmdbToken" />
+                    <flux:button type="submit" variant="primary" class="self-start">{{ __('Salva token') }}</flux:button>
+                </form>
+            </div>
+
+            <flux:separator />
+
             <flux:text class="text-zinc-500">
-                {{ __('Carica il file .zip dell\'export GDPR di TV Time. Verranno importati serie, episodi visti e film; per poster e trame lancia poi la sincronizzazione TMDB.') }}
+                {{ __('Carica il file .zip dell\'export GDPR di TV Time. Verranno importati serie, episodi visti e film; con un token TMDB attivo poster e trame vengono sincronizzati subito dopo.') }}
             </flux:text>
 
             <form wire:submit="import" class="flex flex-col gap-4">
