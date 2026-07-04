@@ -3,6 +3,7 @@
 use App\Models\Movie;
 use App\Models\Show;
 use App\Models\UserList;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -11,6 +12,8 @@ new class extends Component {
 
     public function mount(UserList $userList): void
     {
+        abort_unless($userList->user_id === Auth::id(), 403);
+
         $this->userList = $userList;
     }
 

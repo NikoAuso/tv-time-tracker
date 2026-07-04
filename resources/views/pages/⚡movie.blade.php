@@ -82,6 +82,10 @@ new class extends Component {
 
     public function toggleList(int $listId): void
     {
+        if (! UserList::where('user_id', Auth::id())->whereKey($listId)->exists()) {
+            return;
+        }
+
         $this->movie->lists()->toggle($listId);
 
         unset($this->listIds);

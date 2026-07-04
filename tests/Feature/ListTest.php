@@ -64,6 +64,27 @@ it('adds a movie to a list and lists it in the detail page', function () {
         ->assertSee('Fury');
 });
 
+it('forbids opening another user list', function () {
+    $owner = User::factory()->create();
+    $intruder = User::factory()->create();
+    $list = UserList::factory()->create(['user_id' => $owner->id]);
+
+    Livewire::actingAs($intruder)->test('pages::list', ['userList' => $list])
+        ->assertForbidden();
+});
+
+it('ignores toggling a list the user does not own', function () {
+    $owner = User::factory()->create();
+    $intruder = User::factory()->create();
+    $show = Show::factory()->create();
+    $list = UserList::factory()->create(['user_id' => $owner->id]);
+
+    Livewire::actingAs($intruder)->test('pages::show', ['show' => $show])
+        ->call('toggleList', $list->id);
+
+    expect($list->shows()->count())->toBe(0);
+});
+
 it('removes an item from the list detail page', function () {
     $user = User::factory()->create();
     $show = Show::factory()->create();
