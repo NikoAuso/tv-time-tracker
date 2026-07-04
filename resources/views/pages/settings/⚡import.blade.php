@@ -104,11 +104,14 @@ new #[Title('Import')] class extends Component {
     <x-pages::settings.layout :heading="__('Import')" :subheading="__('Importa i tuoi dati dall\'export di TV Time')">
         <div class="my-6 flex w-full max-w-md flex-col gap-8">
             <div class="flex flex-col gap-4">
-                <div>
+                <div class="flex flex-col gap-1">
                     <flux:heading size="sm">{{ __('Token TMDB') }}</flux:heading>
                     <flux:text size="sm" class="text-zinc-500">
-                        {{ __('Serve per scaricare poster e trame. Prendi un Read Access Token (v4) su themoviedb.org.') }}
+                        {{ __('Serve per scaricare poster e trame.') }}
                     </flux:text>
+                    <flux:modal.trigger name="tmdb-guide">
+                        <flux:link class="cursor-pointer text-sm">{{ __('Come ottenere il token →') }}</flux:link>
+                    </flux:modal.trigger>
                 </div>
 
                 @if (Auth::user()->hasTmdbToken())
@@ -126,6 +129,44 @@ new #[Title('Import')] class extends Component {
                     <flux:button type="submit" variant="primary" class="self-start">{{ __('Salva token') }}</flux:button>
                 </form>
             </div>
+
+            <flux:modal name="tmdb-guide" class="max-w-md">
+                <div class="flex flex-col gap-5">
+                    <div>
+                        <flux:heading size="lg">{{ __('Come ottenere il token TMDB') }}</flux:heading>
+                        <flux:text size="sm" class="mt-1 text-zinc-500">
+                            {{ __('Serve un account gratuito su TheMovieDB. Bastano un paio di minuti.') }}
+                        </flux:text>
+                    </div>
+
+                    <ol class="flex flex-col gap-4">
+                        @foreach ([
+                            __('Crea un account (o accedi) su themoviedb.org.'),
+                            __('Apri Impostazioni → API, oppure vai su themoviedb.org/settings/api.'),
+                            __('Se non hai una chiave, richiedi una API key di tipo «Developer»: accetta i termini e compila il form (per uso personale vanno bene dati generici).'),
+                            __('Copia il «Token di accesso in lettura (v4)» — il codice lungo, non la «API Key (v3)».'),
+                            __('Torna qui, incolla il token nel campo e premi «Salva token».'),
+                        ] as $i => $step)
+                            <li class="flex gap-3">
+                                <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-content text-xs font-semibold text-accent-foreground">{{ $i + 1 }}</span>
+                                <div class="flex flex-1 flex-col gap-2">
+                                    <flux:text size="sm">{{ $step }}</flux:text>
+                                    @php $shot = public_path('img/tmdb/step-'.($i + 1).'.png'); @endphp
+                                    @if (file_exists($shot))
+                                        <img src="{{ asset('img/tmdb/step-'.($i + 1).'.png') }}" alt=""
+                                            class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700" />
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ol>
+
+                    <flux:button href="https://www.themoviedb.org/settings/api" target="_blank"
+                        variant="primary" icon="arrow-up-right" class="self-start">
+                        {{ __('Apri TMDB') }}
+                    </flux:button>
+                </div>
+            </flux:modal>
 
             <flux:separator />
 
