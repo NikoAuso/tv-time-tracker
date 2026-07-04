@@ -55,7 +55,13 @@ new #[Title('Import')] class extends Component {
         $this->cleanup($dir);
         $this->reset('archive');
 
-        Flux::toast(variant: 'success', text: __('Import completato. Sincronizza i metadati per poster e trame.'));
+        if (filled(config('services.tmdb.token'))) {
+            Artisan::call('shows:sync');
+            Artisan::call('movies:sync');
+            Flux::toast(variant: 'success', text: __('Import e sincronizzazione TMDB completati.'));
+        } else {
+            Flux::toast(variant: 'success', text: __('Import completato. Aggiungi TMDB_TOKEN per poster e trame.'));
+        }
     }
 
     private function cleanup(string $dir): void
@@ -83,6 +89,11 @@ new #[Title('Import')] class extends Component {
                     {{ __('Importa') }}
                 </flux:button>
             </form>
+
+            <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
+                <flux:icon.arrow-path class="size-4 animate-spin" />
+                {{ __('Import e sincronizzazione in corso… può richiedere qualche minuto.') }}
+            </div>
         </div>
     </x-pages::settings.layout>
 </section>
