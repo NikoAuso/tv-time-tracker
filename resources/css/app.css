@@ -61,6 +61,11 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
+/* Oscura lo sfondo all'apertura di un modale (il default Flux al 10% è troppo tenue). */
+[data-flux-modal] > dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

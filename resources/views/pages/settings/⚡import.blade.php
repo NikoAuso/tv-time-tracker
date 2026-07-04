@@ -131,7 +131,7 @@ new #[Title('Importa dati')] class extends Component {
             </div>
 
             <flux:modal name="tmdb-guide" class="max-w-md">
-                <div class="flex flex-col gap-5">
+                <div class="flex max-h-[80vh] flex-col gap-5 overflow-y-auto py-2">
                     <div>
                         <flux:heading size="lg">{{ __('Come ottenere il token TMDB') }}</flux:heading>
                         <flux:text size="sm" class="mt-1 text-zinc-500">
@@ -141,10 +141,10 @@ new #[Title('Importa dati')] class extends Component {
 
                     <ol class="flex flex-col gap-4">
                         @foreach ([
-                            __('Crea un account (o accedi) su themoviedb.org.'),
+                            __('Crea un account o accedi su themoviedb.org.'),
                             __('Apri Impostazioni → API, oppure vai su themoviedb.org/settings/api.'),
-                            __('Se non hai una chiave, richiedi una API key di tipo «Developer»: accetta i termini e compila il form (per uso personale vanno bene dati generici).'),
-                            __('Copia il «Token di accesso in lettura (v4)» — il codice lungo, non la «API Key (v3)».'),
+                            __('Dovrai creare una chiave di tipo "Developer": clicca su "+Creare" e compila con i dati che vedi in foto (sono fittizi e puoi mettere quello che vuoi). Compila anche le tue informazioni personali in fondo alla pagine e poi su "Subscribe".'),
+                            __('Copia il token in "API Read Access Token"'),
                             __('Torna qui, incolla il token nel campo e premi «Salva token».'),
                         ] as $i => $step)
                             <li class="flex gap-3">
@@ -154,7 +154,7 @@ new #[Title('Importa dati')] class extends Component {
                                     @php $shot = public_path('img/tmdb/step-'.($i + 1).'.png'); @endphp
                                     @if (file_exists($shot))
                                         <img src="{{ asset('img/tmdb/step-'.($i + 1).'.png') }}" alt=""
-                                            class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700" />
+                                            class="max-h-80 w-auto self-start rounded-lg border border-zinc-200 dark:border-zinc-700" />
                                     @endif
                                 </div>
                             </li>
