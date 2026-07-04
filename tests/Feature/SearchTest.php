@@ -1,0 +1,95 @@
+<?php
+
+use App\Models\Episode;
+use App\Models\Movie;
+use App\Models\Show;
+use App\Models\User;
+use App\Models\UserMovie;
+use App\Models\UserShow;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
+
+uses(RefreshDatabase::class);
+
+it('shows a token notice when no TMDB token is set', function () {
+    config(['services.tmdb.token' => null]);
+
+    Livewire::actingAs(User::factory()->create())->test('pages::search')
+        ->assertSee('token TMDB');
+});
+
+it('finds shows and adds one (with episodes) to the library', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/search/tv*' => Http::response(['results' => [
+            ['id' => 100, 'name' => 'Dune: Prophecy', 'poster_path' => '/d.jpg', 'first_air_date' => '2024-11-17'],
+        ]]),
+        'https://api.themoviedb.org/3/tv/100/season/*' => Http::response(['episodes' => [
+            ['id' => 1, 'episode_number' => 1, 'name' => 'Pilot', 'runtime' => 55],
+        ]]),
+        'https://api.themoviedb.org/3/tv/100*' => Http::response([
+            'id' => 100, 'name' => 'Dune: Prophecy', 'poster_path' => '/d.jpg', 'first_air_date' => '2024-11-17',
+            'number_of_episodes' => 1, 'status' => 'Returning Series', 'seasons' => [['season_number' => 1]],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->set('type', 'series')
+        ->set('q', 'dune')
+        ->assertSee('Dune: Prophecy')
+        ->call('add', 100)
+        ->assertHasNoErrors();
+
+    $show = Show::where('tmdb_id', 100)->first();
+    expect($show)->not->toBeNull()
+        ->and($show->name)->toBe('Dune: Prophecy')
+        ->and(UserShow::where('user_id', $user->id)->where('show_id', $show->id)->value('status'))->toBe('watchlist')
+        ->and(Episode::where('show_id', $show->id)->count())->toBe(1);
+});
+
+it('finds movies and adds one to the library', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/search/movie*' => Http::response(['results' => [
+            ['id' => 200, 'title' => 'Fury', 'poster_path' => '/f.jpg', 'release_date' => '2014-10-15'],
+        ]]),
+        'https://api.themoviedb.org/3/movie/200*' => Http::response([
+            'id' => 200, 'title' => 'Fury', 'poster_path' => '/f.jpg', 'release_date' => '2014-10-15', 'runtime' => 134,
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->set('type', 'movies')
+        ->set('q', 'fury')
+        ->assertSee('Fury')
+        ->call('add', 200)
+        ->assertHasNoErrors();
+
+    $movie = Movie::where('tmdb_id', 200)->first();
+    expect($movie)->not->toBeNull()
+        ->and($movie->runtime)->toBe(134)
+        ->and(UserMovie::where('user_id', $user->id)->where('movie_id', $movie->id)->value('status'))->toBe('watchlist');
+});
+
+it('marks results already in the library', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/search/tv*' => Http::response(['results' => [
+            ['id' => 100, 'name' => 'House', 'poster_path' => '/h.jpg', 'first_air_date' => '2004-11-16'],
+        ]]),
+    ]);
+
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['tmdb_id' => 100, 'name' => 'House']);
+    UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id]);
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->set('type', 'series')
+        ->set('q', 'house')
+        ->assertSee('In libreria');
+});

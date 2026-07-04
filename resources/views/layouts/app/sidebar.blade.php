@@ -16,8 +16,8 @@
                 <flux:sidebar.item icon="film" :href="route('library')" :current="request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('movies.*') || request()->routeIs('episodes.*')" wire:navigate>
                     {{ __('Libreria') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="list-bullet" :href="route('lists')" :current="request()->routeIs('lists') || request()->routeIs('lists.*')" wire:navigate>
-                    {{ __('Liste') }}
+                <flux:sidebar.item icon="magnifying-glass" :href="route('search')" :current="request()->routeIs('search')" wire:navigate>
+                    {{ __('Cerca') }}
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="chart-bar" :href="route('stats')" :current="request()->routeIs('stats')" wire:navigate>
                     {{ __('Statistiche') }}
@@ -54,7 +54,7 @@
                 $tabs = [
                     ['dashboard', 'play', 'Da guardare', request()->routeIs('dashboard')],
                     ['library', 'film', 'Libreria', request()->routeIs('library') || request()->routeIs('shows.*') || request()->routeIs('movies.*') || request()->routeIs('episodes.*')],
-                    ['lists', 'list-bullet', 'Liste', request()->routeIs('lists') || request()->routeIs('lists.*')],
+                    ['search', 'magnifying-glass', 'Cerca', request()->routeIs('search')],
                     ['stats', 'chart-bar', 'Statistiche', request()->routeIs('stats')],
                     ['profile.edit', 'user', 'Profilo', request()->is('settings*')],
                 ];

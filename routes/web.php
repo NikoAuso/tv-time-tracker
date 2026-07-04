@@ -16,6 +16,7 @@ Route::middleware(['pin'])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 
     Route::livewire('library', 'pages::library')->name('library');
+    Route::livewire('search', 'pages::search')->name('search');
     Route::livewire('shows/{show}', 'pages::show')->name('shows.show');
     Route::livewire('movies/{movie}', 'pages::movie')->name('movies.show');
     Route::livewire('episodes/{episode}', 'pages::episode')->name('episodes.show');

@@ -74,4 +74,40 @@ class Tmdb
 
         return $response->ok() ? ($response->json('results.0') ?: null) : null;
     }
+
+    /**
+     * Cerca serie per titolo (tutti i risultati).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchShows(string $query): array
+    {
+        $response = $this->client()->get('/search/tv', ['query' => $query]);
+
+        return $response->ok() ? ($response->json('results') ?? []) : [];
+    }
+
+    /**
+     * Cerca film per titolo (tutti i risultati).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchMovies(string $query): array
+    {
+        $response = $this->client()->get('/search/movie', ['query' => $query]);
+
+        return $response->ok() ? ($response->json('results') ?? []) : [];
+    }
+
+    /**
+     * Dettaglio film TMDB (include runtime).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getMovie(int $tmdbId): ?array
+    {
+        $response = $this->client()->get("/movie/{$tmdbId}");
+
+        return $response->ok() ? $response->json() : null;
+    }
 }
