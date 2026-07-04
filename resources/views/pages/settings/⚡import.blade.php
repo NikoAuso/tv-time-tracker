@@ -8,7 +8,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-new #[Title('Import')] class extends Component {
+new #[Title('Importa dati')] class extends Component {
     use WithFileUploads;
 
     public $archive;
@@ -85,9 +85,9 @@ new #[Title('Import')] class extends Component {
             config(['services.tmdb.token' => $token]);
             Artisan::call('shows:sync');
             Artisan::call('movies:sync');
-            Flux::toast(variant: 'success', text: __('Import e sincronizzazione TMDB completati.'));
+            Flux::toast(variant: 'success', text: __('Importazione e sincronizzazione TMDB completate.'));
         } else {
-            Flux::toast(variant: 'success', text: __('Import completato. Imposta un token TMDB per poster e trame.'));
+            Flux::toast(variant: 'success', text: __('Importazione completata. Imposta un token TMDB per poster e trame.'));
         }
     }
 
@@ -101,7 +101,7 @@ new #[Title('Import')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <x-pages::settings.layout :heading="__('Import')" :subheading="__('Importa i tuoi dati dall\'export di TV Time')">
+    <x-pages::settings.layout :heading="__('Importa dati')" :subheading="__('Importa i tuoi dati dall\'export di TV Time')">
         <div class="my-6 flex w-full max-w-md flex-col gap-8">
             <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-1">
@@ -184,7 +184,7 @@ new #[Title('Import')] class extends Component {
 
             <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
                 <flux:icon.arrow-path class="size-4 animate-spin" />
-                {{ __('Import e sincronizzazione in corso… può richiedere qualche minuto.') }}
+                {{ __('Importazione e sincronizzazione in corso… può richiedere qualche minuto.') }}
             </div>
         </div>
     </x-pages::settings.layout>
