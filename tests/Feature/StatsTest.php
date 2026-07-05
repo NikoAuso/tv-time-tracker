@@ -1,11 +1,14 @@
 <?php
 
 use App\Models\Episode;
+use App\Models\Movie;
 use App\Models\Show;
 use App\Models\User;
+use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -32,4 +35,16 @@ it('renders stats for the current user only', function () {
         ->assertSee('Statistiche')
         ->assertSee('House')
         ->assertDontSee('SecretShow');
+});
+
+it('shows movie stats on the film tab', function () {
+    $user = User::factory()->create();
+    $movie = Movie::factory()->create(['title' => 'Fury', 'runtime' => 134, 'release_date' => '2014-10-15']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $movie->id, 'status' => 'watched']);
+
+    Livewire::actingAs($user)->test('pages::stats')
+        ->set('tab', 'movies')
+        ->assertSee('Durata media')
+        ->assertSee('Film visti per decennio')
+        ->assertSee('Anni 2010');
 });
