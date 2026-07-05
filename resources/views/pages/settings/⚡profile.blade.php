@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\UserList;
+use App\Models\UserMovie;
+use App\Models\UserShow;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -116,6 +118,26 @@ new #[Title('Profilo')] class extends Component {
             ->get();
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, UserShow>
+     */
+    #[Computed]
+    public function favoriteShows()
+    {
+        return UserShow::where('user_id', Auth::id())->where('is_favorite', true)
+            ->with('show')->latest('id')->take(20)->get();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, UserMovie>
+     */
+    #[Computed]
+    public function favoriteMovies()
+    {
+        return UserMovie::where('user_id', Auth::id())->where('is_favorite', true)
+            ->with('movie')->latest('id')->take(20)->get();
+    }
+
     #[Computed]
     public function memberSince(): ?string
     {
@@ -172,6 +194,38 @@ new #[Title('Profilo')] class extends Component {
                     </div>
                 </div>
             @endforeach
+        </div>
+
+        {{-- Preferiti --}}
+        <div class="flex flex-col gap-4">
+            <flux:text class="px-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">{{ __('Preferiti') }}</flux:text>
+
+            @if ($this->favoriteShows->isEmpty() && $this->favoriteMovies->isEmpty())
+                <flux:text size="sm" class="px-1 text-zinc-500">{{ __('Segna serie e film col cuore per vederli qui.') }}</flux:text>
+            @else
+                @foreach ([
+                    [__('Serie'), $this->favoriteShows, 'show', 'shows.show'],
+                    [__('Film'), $this->favoriteMovies, 'movie', 'movies.show'],
+                ] as [$label, $favorites, $rel, $routeName])
+                    @if ($favorites->isNotEmpty())
+                        <div class="flex flex-col gap-2">
+                            <flux:text size="sm" class="px-1 text-zinc-500">{{ $label }}</flux:text>
+                            <div class="flex gap-3 overflow-x-auto pb-1">
+                                @foreach ($favorites as $fav)
+                                    @php $item = $fav->{$rel}; @endphp
+                                    <a href="{{ route($routeName, $item) }}" wire:navigate class="w-16 shrink-0">
+                                        @include('partials.poster', [
+                                            'poster' => $item->poster_path,
+                                            'title' => $item->name ?? $item->title,
+                                            'size' => 'w185',
+                                        ])
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+            @endif
         </div>
 
         {{-- Liste --}}

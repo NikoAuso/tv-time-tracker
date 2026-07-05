@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('movie_id')->constrained()->cascadeOnDelete();
             $table->string('status')->default('watched');
+            $table->boolean('is_favorite')->default(false);
             $table->timestamp('watched_at')->nullable();
             $table->unsignedInteger('rewatch_count')->default(0);
             $table->unsignedTinyInteger('rating')->nullable();

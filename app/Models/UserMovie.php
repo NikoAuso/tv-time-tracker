@@ -16,13 +16,14 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $movie_id
  * @property string $status
+ * @property bool $is_favorite
  * @property Carbon|null $watched_at
  * @property int $rewatch_count
  * @property int|null $rating
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'movie_id', 'status', 'watched_at', 'rewatch_count', 'rating'])]
+#[Fillable(['user_id', 'movie_id', 'status', 'is_favorite', 'watched_at', 'rewatch_count', 'rating'])]
 class UserMovie extends Model
 {
     /** @use HasFactory<UserMovieFactory> */
@@ -46,6 +47,7 @@ class UserMovie extends Model
     protected function casts(): array
     {
         return [
+            'is_favorite' => 'boolean',
             'watched_at' => 'datetime',
             'rewatch_count' => 'integer',
             'rating' => 'integer',

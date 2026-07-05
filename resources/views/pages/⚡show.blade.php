@@ -39,6 +39,14 @@ new class extends Component {
         unset($this->userShow);
     }
 
+    public function toggleFavorite(): void
+    {
+        $entry = UserShow::firstOrCreate(['user_id' => Auth::id(), 'show_id' => $this->show->id]);
+        $entry->update(['is_favorite' => ! $entry->is_favorite]);
+
+        unset($this->userShow);
+    }
+
     /**
      * @return \Illuminate\Support\Collection<int, UserList>
      */
@@ -219,6 +227,9 @@ new class extends Component {
                     style="width: {{ $this->totalCount ? round($this->watchedCount / $this->totalCount * 100) : 0 }}%"></div>
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-4">
+                <button type="button" wire:click="toggleFavorite" class="shrink-0" aria-label="{{ __('Preferito') }}">
+                    <flux:icon.heart class="size-6 {{ $this->userShow?->is_favorite ? 'fill-current text-red-500' : 'text-zinc-400' }}" />
+                </button>
                 @include('partials.star-rating', ['rating' => $this->userShow?->rating])
                 @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
             </div>

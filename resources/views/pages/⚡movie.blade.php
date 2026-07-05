@@ -52,6 +52,17 @@ new class extends Component {
         unset($this->entry);
     }
 
+    public function toggleFavorite(): void
+    {
+        $entry = UserMovie::firstOrCreate(
+            ['user_id' => Auth::id(), 'movie_id' => $this->movie->id],
+            ['status' => 'watchlist'],
+        );
+        $entry->update(['is_favorite' => ! $entry->is_favorite]);
+
+        unset($this->entry);
+    }
+
     public function rate(int $stars): void
     {
         UserMovie::updateOrCreate(
@@ -136,6 +147,9 @@ new class extends Component {
             </div>
 
             <div class="mt-1 flex flex-wrap items-center gap-4">
+                <button type="button" wire:click="toggleFavorite" class="shrink-0" aria-label="{{ __('Preferito') }}">
+                    <flux:icon.heart class="size-6 {{ $this->entry?->is_favorite ? 'fill-current text-red-500' : 'text-zinc-400' }}" />
+                </button>
                 @include('partials.star-rating', ['rating' => $this->entry?->rating])
                 @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
             </div>
