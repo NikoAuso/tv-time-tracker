@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use ReflectionFunction;
 
 /**
@@ -27,9 +28,12 @@ class BundleSeeder
     ];
 
     /**
-     * Copia i dati dal seed nella connessione di default. Le FK sono disattivate
-     * durante la copia per non dipendere dall'ordine di inserimento; le sequenze
-     * autoincrement vengono riallineate al MAX(id) copiato.
+     * Copia i dati dal seed nella connessione di default. Le colonne sono
+     * elencate per nome (non `SELECT *`): il seed può avere le colonne in un
+     * ordine diverso dallo schema migrato — es. una colonna aggiunta a mano con
+     * `ALTER TABLE` finisce in coda — e un copy posizionale le disallineerebbe.
+     * Le FK sono disattivate durante la copia; le sequenze autoincrement vengono
+     * riallineate al MAX(id) copiato.
      */
     public static function seedInto(string $seedPath, ?string $connection = null): void
     {
@@ -39,7 +43,8 @@ class BundleSeeder
         $db->statement("ATTACH DATABASE '{$seedPath}' AS seed");
 
         foreach (self::TABLES as $table) {
-            $db->statement("INSERT INTO {$table} SELECT * FROM seed.{$table}");
+            $columns = implode(', ', Schema::connection($connection)->getColumnListing($table));
+            $db->statement("INSERT INTO {$table} ({$columns}) SELECT {$columns} FROM seed.{$table}");
             $db->statement("UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM {$table}) WHERE name = '{$table}'");
         }
 
