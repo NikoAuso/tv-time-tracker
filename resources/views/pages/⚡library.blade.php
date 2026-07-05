@@ -132,8 +132,8 @@ new #[Title('Libreria')] class extends Component {
 
         <flux:separator vertical class="h-6 max-sm:hidden" />
 
-        <div class="flex gap-2">
-            @foreach (['library' => 'In libreria', 'watchlist' => 'Da vedere', 'archived' => 'Archiviate'] as $key => $label)
+        <div class="flex flex-wrap gap-2">
+            @foreach (['library' => 'Visti / In corso', 'watchlist' => 'Da vedere', 'archived' => 'Archiviate'] as $key => $label)
                 @if ($key !== 'archived' || $type !== 'movies')
                     <flux:button size="sm" wire:click="$set('status', '{{ $key }}')"
                         :variant="$status === $key ? 'primary' : 'ghost'">
