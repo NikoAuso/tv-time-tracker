@@ -138,7 +138,9 @@ new #[Title('Libreria')] class extends Component {
                     <flux:button size="sm" wire:click="$set('status', '{{ $key }}')"
                         :variant="$status === $key ? 'primary' : 'ghost'">
                         {{ __($label) }}
-                        <flux:badge size="sm" inset="right">{{ $this->statusCounts[$key] ?? 0 }}</flux:badge>
+                        <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {{ $status === $key ? 'bg-white/25 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' }}">
+                            {{ $this->statusCounts[$key] ?? 0 }}
+                        </span>
                     </flux:button>
                 @endif
             @endforeach
