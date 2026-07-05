@@ -20,7 +20,8 @@
         "livewire/blaze": "^1.0",
         "livewire/flux": "^2.13.1",
         "livewire/livewire": "^4.1",
-        "nativephp/mobile": "^3.3"
+        "nativephp/mobile": "^3.3",
+        "ext-zip": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
