@@ -110,4 +110,28 @@ class Tmdb
 
         return $response->ok() ? $response->json() : null;
     }
+
+    /**
+     * Serie di tendenza della settimana.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function trendingShows(): array
+    {
+        $response = $this->client()->get('/trending/tv/week');
+
+        return $response->ok() ? ($response->json('results') ?? []) : [];
+    }
+
+    /**
+     * Film di tendenza della settimana.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function trendingMovies(): array
+    {
+        $response = $this->client()->get('/trending/movie/week');
+
+        return $response->ok() ? ($response->json('results') ?? []) : [];
+    }
 }

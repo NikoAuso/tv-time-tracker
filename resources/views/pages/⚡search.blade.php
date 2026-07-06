@@ -19,6 +19,13 @@ new #[Title('Cerca')] class extends Component {
 
     public string $view = 'list';
 
+    public string $browse = '';
+
+    public function updatedQ(): void
+    {
+        $this->browse = '';
+    }
+
     private function token(): string
     {
         return Auth::user()->tmdb_token ?: (string) config('services.tmdb.token');
@@ -45,10 +52,36 @@ new #[Title('Cerca')] class extends Component {
         $tmdb = new Tmdb($this->token());
         $movies = $this->type === 'movies';
 
-        $raw = $movies ? $tmdb->searchMovies($q) : $tmdb->searchShows($q);
-        $ids = collect($raw)->pluck('id');
+        return $this->mapItems($movies ? $tmdb->searchMovies($q) : $tmdb->searchShows($q), $movies);
+    }
 
-        $inLibrary = $this->inLibrary($movies, $ids->all());
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function trendingShows(): array
+    {
+        return $this->hasToken() ? $this->mapItems((new Tmdb($this->token()))->trendingShows(), false) : [];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function trendingMovies(): array
+    {
+        return $this->hasToken() ? $this->mapItems((new Tmdb($this->token()))->trendingMovies(), true) : [];
+    }
+
+    /**
+     * Normalizza i risultati TMDB e vi aggancia il flag "in libreria".
+     *
+     * @param  array<int, array<string, mixed>>  $raw
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapItems(array $raw, bool $movies): array
+    {
+        $inLibrary = $this->inLibrary($movies, collect($raw)->pluck('id')->all());
 
         return collect($raw)->map(function (array $r) use ($movies, $inLibrary) {
             $localId = $inLibrary[$r['id']] ?? null;
@@ -83,7 +116,7 @@ new #[Title('Cerca')] class extends Component {
         return $local->filter(fn (int $id) => in_array($id, $owned, true));
     }
 
-    public function add(int $tmdbId): void
+    public function add(int $tmdbId, ?string $type = null): void
     {
         if (! $this->hasToken()) {
             return;
@@ -91,11 +124,11 @@ new #[Title('Cerca')] class extends Component {
 
         $library = new TmdbLibrary(new Tmdb($this->token()));
 
-        $added = $this->type === 'movies'
+        $added = ($type ?? $this->type) === 'movies'
             ? $library->addMovie($tmdbId, (int) Auth::id())
             : $library->addShow($tmdbId, (int) Auth::id());
 
-        unset($this->results);
+        unset($this->results, $this->trendingShows, $this->trendingMovies);
 
         Flux::toast(
             variant: $added ? 'success' : 'danger',
@@ -116,76 +149,101 @@ new #[Title('Cerca')] class extends Component {
         <flux:input wire:model.live.debounce.400ms="q" icon="magnifying-glass" autofocus
             :placeholder="__('Cerca una serie o un film…')" />
 
-        <div class="flex items-center justify-between gap-4">
-            <div class="flex gap-2">
-                @foreach (['series' => __('Serie'), 'movies' => __('Film')] as $key => $label)
-                    <flux:button size="sm" wire:click="$set('type', '{{ $key }}')"
-                        :variant="$type === $key ? 'primary' : 'ghost'">{{ $label }}</flux:button>
-                @endforeach
+        @php $searching = mb_strlen(trim($q)) >= 2; @endphp
+
+        @if ($searching)
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex gap-2">
+                    @foreach (['series' => __('Serie'), 'movies' => __('Film')] as $key => $label)
+                        <flux:button size="sm" wire:click="$set('type', '{{ $key }}')"
+                            :variant="$type === $key ? 'primary' : 'ghost'">{{ $label }}</flux:button>
+                    @endforeach
+                </div>
+
+                <div class="flex gap-1">
+                    <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
+                        :variant="$view === 'list' ? 'primary' : 'ghost'" aria-label="{{ __('Lista') }}" />
+                    <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
+                        :variant="$view === 'grid' ? 'primary' : 'ghost'" aria-label="{{ __('Griglia') }}" />
+                </div>
             </div>
 
-            <div class="flex gap-1">
-                <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
-                    :variant="$view === 'list' ? 'primary' : 'ghost'" aria-label="{{ __('Lista') }}" />
-                <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
-                    :variant="$view === 'grid' ? 'primary' : 'ghost'" aria-label="{{ __('Griglia') }}" />
-            </div>
-        </div>
+            @php $results = $this->results; @endphp
 
-        @php $results = $this->results; @endphp
-
-        @if (mb_strlen(trim($q)) < 2)
-            <flux:text class="py-12 text-center text-zinc-500">{{ __('Scrivi almeno 2 caratteri per cercare.') }}</flux:text>
-        @elseif (empty($results))
-            <flux:text class="py-12 text-center text-zinc-500">{{ __('Nessun risultato.') }}</flux:text>
-        @elseif ($view === 'grid')
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                @foreach ($results as $item)
-                    <div class="flex flex-col gap-2">
-                        <div class="relative">
-                            @include('partials.poster', ['poster' => $item['poster'], 'title' => $item['title'], 'ratio' => 'aspect-[2/3]', 'size' => 'w342'])
+            @if (empty($results))
+                <flux:text class="py-12 text-center text-zinc-500">{{ __('Nessun risultato.') }}</flux:text>
+            @elseif ($view === 'grid')
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    @foreach ($results as $item)
+                        @include('partials.search-card', ['item' => $item, 'type' => $type])
+                    @endforeach
+                </div>
+            @else
+                <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @foreach ($results as $item)
+                        <div class="flex items-center gap-3 py-3">
+                            <div class="h-[84px] w-14 shrink-0">
+                                @include('partials.poster', ['poster' => $item['poster'], 'title' => $item['title'], 'ratio' => 'h-full w-full', 'size' => 'w185'])
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <flux:heading size="sm" class="truncate">{{ $item['title'] }}</flux:heading>
+                                <flux:text size="sm" class="text-zinc-500">
+                                    {{ $item['year'] }}{{ $item['year'] ? ' · ' : '' }}{{ $type === 'movies' ? __('Film') : __('Serie') }}
+                                </flux:text>
+                            </div>
                             @if ($item['href'])
-                                <a href="{{ $item['href'] }}" wire:navigate
-                                    class="absolute right-1.5 top-1.5 rounded-full bg-green-600 p-1.5 text-white" aria-label="{{ __('In libreria') }}">
-                                    <flux:icon.check class="size-4" />
-                                </a>
+                                <flux:button :href="$item['href']" wire:navigate size="sm" variant="ghost" icon="check">
+                                    {{ __('In libreria') }}
+                                </flux:button>
                             @else
-                                <button type="button" wire:click="add({{ $item['tmdb_id'] }})"
-                                    class="absolute right-1.5 top-1.5 rounded-full bg-accent-content p-1.5 text-accent-foreground shadow" aria-label="{{ __('Aggiungi') }}">
-                                    <flux:icon.plus class="size-4" />
-                                </button>
+                                <flux:button wire:click="add({{ $item['tmdb_id'] }}, '{{ $type }}')" size="sm" variant="primary" icon="plus">
+                                    {{ __('Aggiungi') }}
+                                </flux:button>
                             @endif
                         </div>
-                        <flux:heading size="sm" class="truncate">{{ $item['title'] }}</flux:heading>
-                        <flux:text size="sm" class="-mt-1 text-zinc-500">{{ $item['year'] }}</flux:text>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
+            @endif
+        @elseif ($browse !== '')
+            @php
+                $browseItems = $browse === 'movies' ? $this->trendingMovies : $this->trendingShows;
+                $browseTitle = $browse === 'movies' ? __('Film di tendenza') : __('Serie di tendenza');
+            @endphp
+            <div class="flex items-center gap-2">
+                <flux:button wire:click="$set('browse', '')" variant="ghost" size="sm" icon="arrow-left">{{ __('Indietro') }}</flux:button>
+                <flux:heading size="lg">{{ $browseTitle }}</flux:heading>
             </div>
+            @if (empty($browseItems))
+                <flux:text class="py-12 text-center text-zinc-500">{{ __('Nessun contenuto di tendenza.') }}</flux:text>
+            @else
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    @foreach ($browseItems as $item)
+                        @include('partials.search-card', ['item' => $item, 'type' => $browse])
+                    @endforeach
+                </div>
+            @endif
         @else
-            <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
-                @foreach ($results as $item)
-                    <div class="flex items-center gap-3 py-3">
-                        <div class="h-[84px] w-14 shrink-0">
-                            @include('partials.poster', ['poster' => $item['poster'], 'title' => $item['title'], 'ratio' => 'h-full w-full', 'size' => 'w185'])
+            @foreach ([
+                ['title' => __('Serie di tendenza'), 'items' => $this->trendingShows, 'type' => 'series', 'cta' => __('Sfoglia tutte le serie')],
+                ['title' => __('Film di tendenza'), 'items' => $this->trendingMovies, 'type' => 'movies', 'cta' => __('Sfoglia tutti i film')],
+            ] as $section)
+                @if (! empty($section['items']))
+                    <div class="flex flex-col gap-3">
+                        <flux:heading size="lg">{{ $section['title'] }}</flux:heading>
+                        <div class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+                            @foreach ($section['items'] as $item)
+                                <div class="w-28 shrink-0 sm:w-32">
+                                    @include('partials.search-card', ['item' => $item, 'type' => $section['type']])
+                                </div>
+                            @endforeach
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <flux:heading size="sm" class="truncate">{{ $item['title'] }}</flux:heading>
-                            <flux:text size="sm" class="text-zinc-500">
-                                {{ $item['year'] }}{{ $item['year'] ? ' · ' : '' }}{{ $type === 'movies' ? __('Film') : __('Serie') }}
-                            </flux:text>
-                        </div>
-                        @if ($item['href'])
-                            <flux:button :href="$item['href']" wire:navigate size="sm" variant="ghost" icon="check">
-                                {{ __('In libreria') }}
-                            </flux:button>
-                        @else
-                            <flux:button wire:click="add({{ $item['tmdb_id'] }})" size="sm" variant="primary" icon="plus">
-                                {{ __('Aggiungi') }}
-                            </flux:button>
-                        @endif
+                        <flux:button wire:click="$set('browse', '{{ $section['type'] }}')" variant="primary"
+                            icon:trailing="chevron-right" class="w-full justify-between">
+                            {{ $section['cta'] }}
+                        </flux:button>
                     </div>
-                @endforeach
-            </div>
+                @endif
+            @endforeach
         @endif
     @endunless
 </div>
