@@ -267,7 +267,7 @@ new class extends Component {
             </div>
             <div class="mt-2 flex flex-wrap items-center gap-3">
                 @if ($this->watchedCount === 0 && $this->userShow?->status !== 'watchlist')
-                    <flux:button wire:click="addWatchlist" icon="bookmark" variant="outline">
+                    <flux:button wire:click="addWatchlist" size="sm" icon="bookmark" variant="outline">
                         {{ __('Segna da vedere') }}
                     </flux:button>
                 @elseif ($this->userShow?->status === 'watchlist')

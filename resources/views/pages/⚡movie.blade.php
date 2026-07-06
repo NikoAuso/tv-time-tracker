@@ -203,7 +203,7 @@ new class extends Component {
     <div class="flex flex-wrap items-center gap-3">
         @if ($this->entry?->status === 'watched')
             <flux:modal.trigger name="visto-actions">
-                <flux:button icon="check" variant="primary" color="green">
+                <flux:button size="sm" icon="check" variant="primary" color="green">
                     {{ __('Visto') }}
                     @if ($this->entry->rewatch_count > 0)
                         <span class="ml-1 opacity-80">×{{ $this->entry->rewatch_count + 1 }}</span>
@@ -216,13 +216,13 @@ new class extends Component {
                 </flux:text>
             @endif
         @else
-            <flux:button wire:click="markWatched" icon="check" variant="primary">
+            <flux:button wire:click="markWatched" size="sm" icon="check" variant="primary">
                 {{ __('Segna visto') }}
             </flux:button>
         @endif
 
         @unless ($this->entry)
-            <flux:button wire:click="addWatchlist" icon="bookmark" variant="outline">
+            <flux:button wire:click="addWatchlist" size="sm" icon="bookmark" variant="outline">
                 {{ __('Da guardare') }}
             </flux:button>
         @endunless
@@ -253,7 +253,7 @@ new class extends Component {
         <flux:separator />
         <div class="flex flex-col gap-4">
             @if ($this->trailer)
-                <flux:button :href="$this->trailer" target="_blank" icon="play" variant="outline" class="self-start">
+                <flux:button :href="$this->trailer" target="_blank" size="sm" icon="play" variant="outline" class="self-start">
                     {{ __('Trailer') }}
                 </flux:button>
             @endif
@@ -284,10 +284,10 @@ new class extends Component {
             <flux:heading size="lg">{{ __('Visto') }}</flux:heading>
             <flux:text class="text-zinc-500">{{ __('Cosa vuoi fare con questo film?') }}</flux:text>
             <div class="flex flex-col gap-2">
-                <flux:button wire:click="rewatch" icon="arrow-path" variant="primary">
+                <flux:button wire:click="rewatch" size="sm" icon="arrow-path" variant="primary">
                     {{ __('Visto di nuovo') }}
                 </flux:button>
-                <x-remove-button wire:click="unwatch" icon="x-mark">
+                <x-remove-button wire:click="unwatch" size="sm" icon="x-mark">
                     {{ __('Rimuovi visto') }}
                 </x-remove-button>
             </div>
