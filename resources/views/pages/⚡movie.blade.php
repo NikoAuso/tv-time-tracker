@@ -66,24 +66,6 @@ new class extends Component {
         );
     }
 
-    #[Computed]
-    public function backdrop(): ?string
-    {
-        if (! $this->movie->tmdb_id) {
-            return null;
-        }
-
-        return Cache::remember(
-            "movie:{$this->movie->tmdb_id}:backdrop",
-            now()->addWeek(),
-            fn (): ?string => rescue(
-                fn () => data_get(app(Tmdb::class)->getMovie($this->movie->tmdb_id), 'backdrop_path'),
-                null,
-                report: false,
-            ),
-        );
-    }
-
     public function markWatched(): void
     {
         UserMovie::updateOrCreate(
@@ -193,33 +175,25 @@ new class extends Component {
 <div class="flex max-w-2xl flex-col gap-6">
     <x-back-button />
 
-    <div class="relative overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-        @if ($this->backdrop)
-            <img src="https://image.tmdb.org/t/p/w780{{ $this->backdrop }}" alt="" aria-hidden="true"
-                class="absolute inset-0 h-full w-full object-cover object-top" />
-            <div class="absolute inset-0 bg-gradient-to-t from-zinc-100 via-zinc-100/85 to-zinc-100/30 dark:from-zinc-800 dark:via-zinc-800/85 dark:to-zinc-800/30"></div>
+    <div class="flex gap-4">
+        @if ($movie->poster_path)
+            <img src="https://image.tmdb.org/t/p/w342{{ $movie->poster_path }}" alt="{{ $movie->title }}"
+                class="h-44 w-28 shrink-0 rounded-xl object-cover shadow-lg ring-1 ring-black/10 dark:ring-white/10" />
         @endif
+        <div class="flex flex-1 flex-col gap-2">
+            <flux:heading size="xl">{{ $movie->title }}</flux:heading>
+            <flux:text class="tabular-nums text-zinc-600 dark:text-zinc-300">
+                @if ($movie->release_date) {{ $movie->release_date->year }} @endif
+                @if ($movie->runtime) · {{ $movie->runtime }} {{ __('min') }} @endif
+            </flux:text>
 
-        <div class="relative flex items-end gap-4 p-4 pt-24 sm:pt-28">
-            @if ($movie->poster_path)
-                <img src="https://image.tmdb.org/t/p/w342{{ $movie->poster_path }}" alt="{{ $movie->title }}"
-                    class="h-44 w-28 shrink-0 rounded-xl object-cover shadow-lg ring-1 ring-black/10 dark:ring-white/10" />
+            @if ($movie->genres)
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach ($movie->genres as $genre)
+                        <flux:badge size="sm" color="zinc">{{ $genre }}</flux:badge>
+                    @endforeach
+                </div>
             @endif
-            <div class="flex flex-1 flex-col gap-2">
-                <flux:heading size="xl">{{ $movie->title }}</flux:heading>
-                <flux:text class="tabular-nums text-zinc-600 dark:text-zinc-300">
-                    @if ($movie->release_date) {{ $movie->release_date->year }} @endif
-                    @if ($movie->runtime) · {{ $movie->runtime }} {{ __('min') }} @endif
-                </flux:text>
-
-                @if ($movie->genres)
-                    <div class="flex flex-wrap gap-1.5">
-                        @foreach ($movie->genres as $genre)
-                            <flux:badge size="sm" color="zinc">{{ $genre }}</flux:badge>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
         </div>
     </div>
 

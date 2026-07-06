@@ -19,7 +19,6 @@ it('shows genres, trailer and streaming providers on the detail page', function 
         '*/videos*' => Http::response(['results' => [
             ['site' => 'YouTube', 'type' => 'Trailer', 'key' => 'abc123'],
         ]]),
-        '*/movie/*' => Http::response(['backdrop_path' => '/bd.jpg']),
     ]);
 
     $user = User::factory()->create();
@@ -29,7 +28,6 @@ it('shows genres, trailer and streaming providers on the detail page', function 
         ->assertSee('Azione')
         ->assertSee('Dramma')
         ->assertSee('Dove guardarlo')
-        ->assertSee('/bd.jpg', false)
         ->assertSee('youtube.com/watch?v=abc123', false);
 });
 
