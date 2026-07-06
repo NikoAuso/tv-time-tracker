@@ -112,15 +112,16 @@ class UserData
                 UserShow::updateOrCreate(
                     ['user_id' => $userId, 'show_id' => $show->id],
                     self::withoutNulls([
-                        'status' => $s['status'] ?? 'watchlist',
-                        'is_favorite' => $s['is_favorite'] ?? false,
-                        'rating' => $s['rating'] ?? null,
+                        'status' => self::oneOf($s['status'] ?? null, ['following', 'watchlist', 'archived'], 'watchlist'),
+                        'is_favorite' => (bool) ($s['is_favorite'] ?? false),
+                        'rating' => self::clampRating($s['rating'] ?? null),
                         'followed_at' => $s['followed_at'] ?? null,
                     ]),
                 );
 
                 foreach ($s['watched_episodes'] ?? [] as $e) {
-                    $episode = Episode::updateOrCreate(
+                    // Episode appartiene a uno Show condiviso: solo firstOrCreate, mai overwrite.
+                    $episode = Episode::firstOrCreate(
                         ['show_id' => $show->id, 'season_number' => (int) $e['season'], 'episode_number' => (int) $e['episode']],
                         self::withoutNulls([
                             'tmdb_id' => $e['tmdb_id'] ?? null,
@@ -144,10 +145,10 @@ class UserData
                 UserMovie::updateOrCreate(
                     ['user_id' => $userId, 'movie_id' => $movie->id],
                     self::withoutNulls([
-                        'status' => $m['status'] ?? 'watchlist',
-                        'is_favorite' => $m['is_favorite'] ?? false,
-                        'rating' => $m['rating'] ?? null,
-                        'rewatch_count' => $m['rewatch_count'] ?? 0,
+                        'status' => self::oneOf($m['status'] ?? null, ['watched', 'watchlist'], 'watchlist'),
+                        'is_favorite' => (bool) ($m['is_favorite'] ?? false),
+                        'rating' => self::clampRating($m['rating'] ?? null),
+                        'rewatch_count' => max(0, (int) ($m['rewatch_count'] ?? 0)),
                         'watched_at' => $m['watched_at'] ?? null,
                     ]),
                 );
@@ -178,8 +179,10 @@ class UserData
             'status' => $s['air_status'] ?? null,
         ]);
 
+        // Show è un record di catalogo condiviso fra gli utenti: firstOrCreate, mai
+        // overwrite, così un import non può alterare i dati visti dagli altri.
         if (! empty($s['tmdb_id'])) {
-            return Show::updateOrCreate(['tmdb_id' => $s['tmdb_id']], $attrs);
+            return Show::firstOrCreate(['tmdb_id' => $s['tmdb_id']], $attrs);
         }
 
         return Show::firstOrCreate(['name' => $s['name'] ?? ''], $attrs);
@@ -197,11 +200,33 @@ class UserData
             'runtime' => $m['runtime'] ?? null,
         ]);
 
+        // Movie è un record di catalogo condiviso: firstOrCreate, mai overwrite.
         if (! empty($m['tmdb_id'])) {
-            return Movie::updateOrCreate(['tmdb_id' => $m['tmdb_id']], $attrs);
+            return Movie::firstOrCreate(['tmdb_id' => $m['tmdb_id']], $attrs);
         }
 
         return Movie::firstOrCreate(['title' => $m['title'] ?? ''], $attrs);
+    }
+
+    /**
+     * Restituisce $value se è tra quelli ammessi, altrimenti $default.
+     *
+     * @param  list<string>  $allowed
+     */
+    private static function oneOf(mixed $value, array $allowed, string $default): string
+    {
+        return is_string($value) && in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    private static function clampRating(mixed $rating): ?int
+    {
+        if (! is_numeric($rating)) {
+            return null;
+        }
+
+        $r = (int) $rating;
+
+        return $r >= 1 && $r <= 5 ? $r : null;
     }
 
     /**

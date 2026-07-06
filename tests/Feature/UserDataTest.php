@@ -81,6 +81,38 @@ it('imports idempotently without creating duplicates', function () {
     expect($list->shows()->count())->toBe(1)->and($list->movies()->count())->toBe(1);
 });
 
+it('does not overwrite a shared catalog show on import', function () {
+    Show::factory()->create(['tmdb_id' => 100, 'name' => 'House', 'poster_path' => '/real.jpg']);
+    $user = User::factory()->create();
+
+    UserData::import($user->id, [
+        'app' => 'tv-time-tracker',
+        'version' => 1,
+        'shows' => [['tmdb_id' => 100, 'name' => 'Hacked', 'poster_path' => '/evil.jpg', 'status' => 'following']],
+    ]);
+
+    $show = Show::where('tmdb_id', 100)->first();
+    expect($show->name)->toBe('House')->and($show->poster_path)->toBe('/real.jpg')
+        ->and(Show::where('tmdb_id', 100)->count())->toBe(1);
+});
+
+it('sanitizes untrusted status and rating on import', function () {
+    $user = User::factory()->create();
+
+    UserData::import($user->id, [
+        'app' => 'tv-time-tracker',
+        'version' => 1,
+        'shows' => [['tmdb_id' => 100, 'name' => 'House', 'status' => 'garbage', 'rating' => 9999]],
+        'movies' => [['tmdb_id' => 200, 'title' => 'Fury', 'status' => 'hacked', 'rating' => -3]],
+    ]);
+
+    $us = UserShow::where('user_id', $user->id)->first();
+    expect($us->status)->toBe('watchlist')->and($us->rating)->toBeNull();
+
+    $um = UserMovie::where('user_id', $user->id)->first();
+    expect($um->status)->toBe('watchlist')->and($um->rating)->toBeNull();
+});
+
 it('downloads a JSON export from the settings page', function () {
     $user = User::factory()->create();
 
