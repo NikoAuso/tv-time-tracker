@@ -151,7 +151,7 @@ new #[Title('Cerca')] class extends Component {
                                 </a>
                             @else
                                 <button type="button" wire:click="add({{ $item['tmdb_id'] }})"
-                                    class="absolute right-1.5 top-1.5 rounded-full bg-accent-content p-1.5 text-white shadow" aria-label="{{ __('Aggiungi') }}">
+                                    class="absolute right-1.5 top-1.5 rounded-full bg-accent-content p-1.5 text-accent-foreground shadow" aria-label="{{ __('Aggiungi') }}">
                                     <flux:icon.plus class="size-4" />
                                 </button>
                             @endif
