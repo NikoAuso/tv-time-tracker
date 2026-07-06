@@ -5,6 +5,7 @@ use App\Models\Show;
 use App\Models\User;
 use App\Models\WatchedEpisode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -18,6 +19,32 @@ function showWithEpisodes(array $specs): Show
 
     return $show;
 }
+
+it('shows genres, trailer, providers and season episodes on the detail page', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/watch/providers*' => Http::response(['results' => ['IT' => [
+            'link' => 'https://justwatch/it',
+            'flatrate' => [['provider_name' => 'Netflix', 'logo_path' => '/n.jpg']],
+        ]]]),
+        '*/videos*' => Http::response(['results' => [
+            ['site' => 'YouTube', 'type' => 'Trailer', 'key' => 'abc123'],
+        ]]),
+    ]);
+
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['tmdb_id' => 42, 'genres' => ['Dramma', 'Mistero'], 'status' => 'Ended', 'overview' => 'Una trama avvincente.']);
+    Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1, 'name' => 'Pilot']);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->assertSee('Dramma')
+        ->assertSee('Mistero')
+        ->assertSee('Trama')
+        ->assertSee('Dove guardarlo')
+        ->assertSee('Conclusa')
+        ->assertSee('Pilot')
+        ->assertSee('youtube.com/watch?v=abc123', false);
+});
 
 it('marks a whole season watched', function () {
     $user = User::factory()->create();

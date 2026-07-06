@@ -147,7 +147,37 @@ class Tmdb
      */
     public function movieProviders(int $tmdbId, string $region = 'IT'): array
     {
-        $response = $this->client()->get("/movie/{$tmdbId}/watch/providers");
+        return $this->providers('movie', $tmdbId, $region);
+    }
+
+    /**
+     * @return array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}
+     */
+    public function showProviders(int $tmdbId, string $region = 'IT'): array
+    {
+        return $this->providers('tv', $tmdbId, $region);
+    }
+
+    /**
+     * URL YouTube del trailer del film, con fallback su lingua e tipo di video.
+     */
+    public function movieTrailer(int $tmdbId): ?string
+    {
+        return $this->trailer('movie', $tmdbId);
+    }
+
+    public function showTrailer(int $tmdbId): ?string
+    {
+        return $this->trailer('tv', $tmdbId);
+    }
+
+    /**
+     * @param  'movie'|'tv'  $type
+     * @return array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}
+     */
+    private function providers(string $type, int $tmdbId, string $region): array
+    {
+        $response = $this->client()->get("/{$type}/{$tmdbId}/watch/providers");
         $data = $response->ok() ? ($response->json("results.{$region}") ?? []) : [];
 
         return [
@@ -160,12 +190,12 @@ class Tmdb
     }
 
     /**
-     * URL YouTube del trailer del film, con fallback su lingua e tipo di video.
+     * @param  'movie'|'tv'  $type
      */
-    public function movieTrailer(int $tmdbId): ?string
+    private function trailer(string $type, int $tmdbId): ?string
     {
         foreach (['it-IT', 'en-US'] as $language) {
-            $response = $this->client()->get("/movie/{$tmdbId}/videos", ['language' => $language]);
+            $response = $this->client()->get("/{$type}/{$tmdbId}/videos", ['language' => $language]);
             $videos = collect((array) ($response->ok() ? ($response->json('results') ?? []) : []))
                 ->where('site', 'YouTube');
 
