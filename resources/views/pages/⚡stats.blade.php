@@ -175,6 +175,14 @@ new #[Title('Statistiche')] class extends Component {
             ->avg('movies.runtime'));
     }
 
+    #[Computed]
+    public function moviesRewatches(): int
+    {
+        return (int) DB::table('user_movies')
+            ->where('user_id', Auth::id())->where('status', 'watched')
+            ->sum('rewatch_count');
+    }
+
     /**
      * Film visti per decennio di uscita.
      *
@@ -238,6 +246,7 @@ new #[Title('Statistiche')] class extends Component {
                 ['Serie seguite', $it($this->seriesFollowed)],
                 ['Da vedere', $it($this->seriesWatchlist)],
                 ['Preferite', $it($this->seriesFavorites)],
+                ['Media ep/serie', $it($this->seriesFollowed > 0 ? (int) round($this->episodesWatched / $this->seriesFollowed) : 0)],
                 ['Voto medio', $rate($this->seriesAvgRating)],
             ] as [$label, $value])
                 <div class="flex flex-col gap-1 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
@@ -296,6 +305,7 @@ new #[Title('Statistiche')] class extends Component {
                 ['Preferiti', $it($this->moviesFavorites)],
                 ['Voto medio', $rate($this->moviesAvgRating)],
                 ['Durata media', $this->moviesAvgRuntime.' min'],
+                ['Rivisti', $it($this->moviesRewatches)],
             ] as [$label, $value])
                 <div class="flex flex-col gap-1 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
                     <flux:text size="sm" class="text-zinc-500">{{ __($label) }}</flux:text>
