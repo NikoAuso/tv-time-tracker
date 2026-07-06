@@ -61,18 +61,28 @@ class Tmdb
     }
 
     /**
-     * Cerca un film per titolo (e anno se disponibile), restituisce il primo risultato.
+     * Cerca un film per titolo. Con l'anno sceglie il risultato più vicino:
+     * le date importate da TV Time sono spesso sfasate di 1-2 anni rispetto
+     * al primary_release_year di TMDB, quindi un filtro esatto perde il match.
      *
      * @return array<string, mixed>|null
      */
     public function searchMovie(string $title, ?int $year = null): ?array
     {
-        $response = $this->client()->get('/search/movie', array_filter([
-            'query' => $title,
-            'primary_release_year' => $year,
-        ]));
+        $results = $this->searchMovies($title);
 
-        return $response->ok() ? ($response->json('results.0') ?: null) : null;
+        if ($results === [] || $year === null) {
+            return $results[0] ?? null;
+        }
+
+        usort($results, function (array $a, array $b) use ($year): int {
+            $ya = (int) substr((string) ($a['release_date'] ?? ''), 0, 4);
+            $yb = (int) substr((string) ($b['release_date'] ?? ''), 0, 4);
+
+            return abs($ya - $year) <=> abs($yb - $year);
+        });
+
+        return $results[0];
     }
 
     /**
