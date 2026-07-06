@@ -20,6 +20,49 @@ function showWithEpisodes(array $specs): Show
     return $show;
 }
 
+it('marks watched episodes even when an earlier unwatched one exists', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+    // Uno speciale (stagione 0) non visto è ordinato per primo nella collection:
+    // regressione per each() che si fermava al primo episodio non visto.
+    Episode::factory()->create(['show_id' => $show->id, 'season_number' => 0, 'episode_number' => 1]);
+    $watched = Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1]);
+    WatchedEpisode::factory()->create(['user_id' => $user->id, 'episode_id' => $watched->id]);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->assertSee('1/1')
+        ->call('toggleSeason', 1)
+        ->assertSeeHtml('bg-green-600');
+});
+
+it('toggles a season open and closed', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+    Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1, 'name' => 'Primo']);
+    Episode::factory()->create(['show_id' => $show->id, 'season_number' => 2, 'episode_number' => 1, 'name' => 'Secondo']);
+
+    // La prima stagione è aperta di default, la seconda chiusa.
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->assertSee('Primo')
+        ->assertDontSee('Secondo')
+        ->call('toggleSeason', 2)
+        ->assertSee('Secondo')
+        ->call('toggleSeason', 2)
+        ->assertDontSee('Secondo');
+});
+
+it('updates the watched tick and count in the accordion after toggling', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+    $ep = Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1]);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->assertDontSeeHtml('bg-green-600')
+        ->call('toggle', $ep->id)
+        ->assertSee('1/1')
+        ->assertSeeHtml('bg-green-600');
+});
+
 it('lists the specials season after the regular ones', function () {
     $user = User::factory()->create();
     $show = showWithEpisodes([[0, 1], [1, 1], [2, 1]]);

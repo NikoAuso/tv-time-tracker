@@ -18,9 +18,23 @@ new class extends Component {
 
     public string $newEpisode = '';
 
+    /** @var list<int> Stagioni aperte nell'accordion. */
+    public array $openSeasons = [];
+
     public function mount(Show $show): void
     {
         $this->show = $show;
+
+        if (($current = $this->currentSeason) !== null) {
+            $this->openSeasons = [$current];
+        }
+    }
+
+    public function toggleSeason(int $season): void
+    {
+        $this->openSeasons = in_array($season, $this->openSeasons, true)
+            ? array_values(array_diff($this->openSeasons, [$season]))
+            : [...$this->openSeasons, $season];
     }
 
     #[Computed]
@@ -175,8 +189,12 @@ new class extends Component {
             ->pluck('episode_id')
             ->flip();
 
+        // NB: closure void — un'arrow function ritornerebbe il bool e each()
+        // interromperebbe il ciclo al primo episodio non visto.
         return $episodes
-            ->each(fn (Episode $e) => $e->is_watched = $watched->has($e->id))
+            ->each(function (Episode $e) use ($watched): void {
+                $e->is_watched = $watched->has($e->id);
+            })
             ->groupBy('season_number')
             // Gli "Speciali" (stagione 0) vanno in fondo, dopo le stagioni regolari.
             ->sortKeysUsing(fn ($a, $b): int => ((int) $a ?: PHP_INT_MAX) <=> ((int) $b ?: PHP_INT_MAX));
@@ -422,28 +440,30 @@ new class extends Component {
 
         @forelse ($this->seasons as $seasonNumber => $episodes)
             @php $seen = $episodes->where('is_watched')->count(); @endphp
+            @php $open = in_array((int) $seasonNumber, $this->openSeasons, true); @endphp
             <div wire:key="season-{{ $seasonNumber }}"
-                x-data="{ open: @js($seasonNumber == $this->currentSeason) }"
                 class="rounded-xl border border-zinc-200 dark:border-zinc-700">
-                <div class="flex cursor-pointer items-center gap-3 p-4 select-none" x-on:click="open = ! open">
-                    <flux:icon.chevron-right class="size-5 shrink-0 text-zinc-400 transition"
-                        x-bind:class="open && 'rotate-90'" />
-                    <span class="flex-1 font-medium">
-                        {{ $seasonNumber == 0 ? __('Speciali') : __('Stagione').' '.$seasonNumber }}
-                    </span>
-                    <flux:badge size="sm" :color="$seen === $episodes->count() ? 'green' : 'zinc'">
-                        {{ $seen }}/{{ $episodes->count() }}
-                    </flux:badge>
+                <div class="flex items-center gap-3 p-4">
+                    <div class="flex flex-1 cursor-pointer items-center gap-3 select-none"
+                        wire:click="toggleSeason({{ $seasonNumber }})">
+                        <flux:icon.chevron-right class="size-5 shrink-0 text-zinc-400 transition {{ $open ? 'rotate-90' : '' }}" />
+                        <span class="flex-1 font-medium">
+                            {{ $seasonNumber == 0 ? __('Speciali') : __('Stagione').' '.$seasonNumber }}
+                        </span>
+                        <flux:badge size="sm" :color="$seen === $episodes->count() ? 'green' : 'zinc'">
+                            {{ $seen }}/{{ $episodes->count() }}
+                        </flux:badge>
+                    </div>
                     @if ($seen < $episodes->count())
                         <flux:button size="sm" icon="check" variant="primary"
-                            wire:click.stop="markSeason({{ $seasonNumber }})"
+                            wire:click="markSeason({{ $seasonNumber }})"
                             aria-label="{{ __('Segna stagione come vista') }}">{{ __('Visto') }}</flux:button>
                     @endif
                 </div>
 
-                <div x-show="open" x-cloak
-                    class="divide-y divide-zinc-100 border-t border-zinc-100 px-4 dark:divide-zinc-800 dark:border-zinc-800">
-                    @foreach ($episodes as $episode)
+                @if ($open)
+                    <div class="divide-y divide-zinc-100 border-t border-zinc-100 px-4 dark:divide-zinc-800 dark:border-zinc-800">
+                        @foreach ($episodes as $episode)
                         <div wire:key="ep-{{ $episode->id }}" class="flex items-center gap-3 py-2">
                             <flux:link :href="route('episodes.show', $episode)" wire:navigate
                                 class="flex! min-w-0 flex-1 items-center gap-3 no-underline">
@@ -476,8 +496,9 @@ new class extends Component {
                                 <flux:icon.check variant="micro" class="size-4" />
                             </button>
                         </div>
-                    @endforeach
-                </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
         @empty
             <flux:text class="py-8 text-center">{{ __('Nessun episodio disponibile.') }}</flux:text>
