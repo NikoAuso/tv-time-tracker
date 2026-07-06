@@ -12,6 +12,58 @@ it('requests italian localized data from tmdb', function () {
     Http::assertSent(fn ($request) => str_contains($request->url(), 'language=it-IT'));
 });
 
+it('fills an empty italian movie overview from english', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/movie/1?language=en-US*' => Http::response(['id' => 1, 'title' => 'Movie', 'overview' => 'English plot.']),
+        '*/movie/1*' => Http::response(['id' => 1, 'title' => 'Film', 'overview' => '']),
+    ]);
+
+    $movie = app(Tmdb::class)->getMovie(1);
+
+    expect($movie['overview'])->toBe('English plot.')
+        ->and($movie['title'])->toBe('Film');
+});
+
+it('fills empty italian show text from english', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/tv/1?language=en-US*' => Http::response(['id' => 1, 'name' => 'The Show', 'overview' => 'English synopsis.']),
+        '*/tv/1*' => Http::response(['id' => 1, 'name' => '', 'overview' => '']),
+    ]);
+
+    $show = app(Tmdb::class)->getShow(1);
+
+    expect($show['name'])->toBe('The Show')
+        ->and($show['overview'])->toBe('English synopsis.');
+});
+
+it('fills empty italian episode text from english', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/tv/1/season/1?language=en-US*' => Http::response(['episodes' => [
+            ['episode_number' => 1, 'name' => 'The Pilot', 'overview' => 'English episode.'],
+        ]]),
+        '*/tv/1/season/1*' => Http::response(['episodes' => [
+            ['episode_number' => 1, 'name' => '', 'overview' => ''],
+        ]]),
+    ]);
+
+    $episodes = app(Tmdb::class)->getSeasonEpisodes(1, 1);
+
+    expect($episodes[0]['name'])->toBe('The Pilot')
+        ->and($episodes[0]['overview'])->toBe('English episode.');
+});
+
+it('does not fetch english when italian text is present', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake(['*/movie/5*' => Http::response(['id' => 5, 'title' => 'Film', 'overview' => 'Trama italiana.'])]);
+
+    app(Tmdb::class)->getMovie(5);
+
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), 'language=en-US'));
+});
+
 it('prefers an exact title match over a closer-year homonym', function () {
     config(['services.tmdb.token' => 'fake-token']);
     // Un film oscuro con lo stesso anno non deve scavalcare "300" (titolo esatto).

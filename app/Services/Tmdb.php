@@ -45,19 +45,92 @@ class Tmdb
     {
         $response = $this->client()->get("/tv/{$tmdbId}");
 
-        return $response->ok() ? $response->json() : null;
+        if (! $response->ok()) {
+            return null;
+        }
+
+        return $this->fillFromEnglish("/tv/{$tmdbId}", $response->json(), ['name', 'overview']);
     }
 
     /**
-     * Episodi di una stagione.
+     * Episodi di una stagione. I campi testuali senza traduzione italiana
+     * (tipicamente titolo e trama dell'episodio) vengono presi in inglese.
      *
      * @return array<int, array<string, mixed>>
      */
     public function getSeasonEpisodes(int $tmdbId, int $seasonNumber): array
     {
         $response = $this->client()->get("/tv/{$tmdbId}/season/{$seasonNumber}");
+        if (! $response->ok()) {
+            return [];
+        }
 
-        return $response->ok() ? ($response->json('episodes') ?? []) : [];
+        $episodes = (array) ($response->json('episodes') ?? []);
+
+        $missing = collect($episodes)->contains(
+            fn (array $e): bool => $this->blankField($e, 'name') || $this->blankField($e, 'overview')
+        );
+        if (! $missing) {
+            return $episodes;
+        }
+
+        $en = $this->client()->get("/tv/{$tmdbId}/season/{$seasonNumber}", ['language' => 'en-US']);
+        if (! $en->ok()) {
+            return $episodes;
+        }
+        $enByNumber = collect((array) ($en->json('episodes') ?? []))->keyBy('episode_number');
+
+        return collect($episodes)->map(function (array $e) use ($enByNumber): array {
+            $enEp = $enByNumber->get($e['episode_number'] ?? null);
+            if (! is_array($enEp)) {
+                return $e;
+            }
+            foreach (['name', 'overview'] as $field) {
+                if ($this->blankField($e, $field) && ! $this->blankField($enEp, $field)) {
+                    $e[$field] = $enEp[$field];
+                }
+            }
+
+            return $e;
+        })->all();
+    }
+
+    /**
+     * Riempie i campi testuali vuoti (traduzione italiana assente) con la
+     * versione inglese, con una sola chiamata extra solo quando serve.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<string>  $fields
+     * @return array<string, mixed>
+     */
+    private function fillFromEnglish(string $path, array $data, array $fields): array
+    {
+        $missing = array_values(array_filter($fields, fn (string $f): bool => $this->blankField($data, $f)));
+        if ($missing === []) {
+            return $data;
+        }
+
+        $en = $this->client()->get($path, ['language' => 'en-US']);
+        if (! $en->ok()) {
+            return $data;
+        }
+        $enData = $en->json();
+
+        foreach ($missing as $field) {
+            if (! $this->blankField($enData, $field)) {
+                $data[$field] = $enData[$field];
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function blankField(array $data, string $field): bool
+    {
+        return trim((string) ($data[$field] ?? '')) === '';
     }
 
     /**
@@ -137,7 +210,11 @@ class Tmdb
     {
         $response = $this->client()->get("/movie/{$tmdbId}");
 
-        return $response->ok() ? $response->json() : null;
+        if (! $response->ok()) {
+            return null;
+        }
+
+        return $this->fillFromEnglish("/movie/{$tmdbId}", $response->json(), ['title', 'overview']);
     }
 
     /**

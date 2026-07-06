@@ -20,6 +20,14 @@ function showWithEpisodes(array $specs): Show
     return $show;
 }
 
+it('lists the specials season after the regular ones', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[0, 1], [1, 1], [2, 1]]);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->assertSeeInOrder(['Stagione 1', 'Stagione 2', 'Speciali']);
+});
+
 it('shows genres, trailer, providers and season episodes on the detail page', function () {
     config(['services.tmdb.token' => 'fake-token']);
     Http::fake([

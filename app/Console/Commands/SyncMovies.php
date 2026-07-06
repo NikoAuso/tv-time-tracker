@@ -74,7 +74,7 @@ class SyncMovies extends Command
             'tmdb_id' => $match['id'] ?? null,
             'title' => $match['title'] ?? $movie->title,
             'poster_path' => $match['poster_path'] ?? $movie->poster_path,
-            'overview' => $match['overview'] ?? $movie->overview,
+            'overview' => ($match['overview'] ?? '') ?: ($detail['overview'] ?? $movie->overview),
             'release_date' => ($match['release_date'] ?? '') ?: $movie->release_date,
             'runtime' => $detail['runtime'] ?? $movie->runtime,
             'genres' => $detail ? array_column($detail['genres'] ?? [], 'name') : $movie->genres,

@@ -177,7 +177,9 @@ new class extends Component {
 
         return $episodes
             ->each(fn (Episode $e) => $e->is_watched = $watched->has($e->id))
-            ->groupBy('season_number');
+            ->groupBy('season_number')
+            // Gli "Speciali" (stagione 0) vanno in fondo, dopo le stagioni regolari.
+            ->sortKeysUsing(fn ($a, $b): int => ((int) $a ?: PHP_INT_MAX) <=> ((int) $b ?: PHP_INT_MAX));
     }
 
     #[Computed]
