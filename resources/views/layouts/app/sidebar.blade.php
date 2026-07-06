@@ -44,7 +44,7 @@
                 @if (auth()->user()->hasPin())
                     <form method="POST" action="{{ route('lock') }}">
                         @csrf
-                        <flux:button type="submit" variant="ghost" size="sm" icon="lock-closed" aria-label="{{ __('Blocca') }}" />
+                        <flux:button type="submit" variant="outline" size="sm" icon="lock-closed" aria-label="{{ __('Blocca') }}" />
                     </form>
                 @endif
             </div>
