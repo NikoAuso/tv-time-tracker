@@ -104,9 +104,7 @@ new class extends Component {
 }; ?>
 
 <div class="flex max-w-2xl flex-col gap-6">
-    <flux:button :href="route('library')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
-        {{ __('Libreria') }}
-    </flux:button>
+    <x-back-button />
 
     <div class="flex gap-4">
         @if ($movie->poster_path)

@@ -64,9 +64,7 @@ new class extends Component {
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <flux:button :href="route('lists')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
-        {{ __('Liste') }}
-    </flux:button>
+    <x-back-button />
 
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="truncate">{{ $userList->name }}</flux:heading>

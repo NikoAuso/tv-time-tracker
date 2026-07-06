@@ -1,7 +1,5 @@
 <div class="flex w-full flex-col gap-2">
-    <flux:button :href="route('profile.edit')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
-        {{ __('Profilo') }}
-    </flux:button>
+    <x-back-button />
 
     <div class="mt-2">
         <flux:heading size="xl">{{ $heading ?? '' }}</flux:heading>

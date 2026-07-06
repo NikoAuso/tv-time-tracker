@@ -39,8 +39,7 @@ new class extends Component {
 }; ?>
 
 <div class="flex max-w-2xl flex-col gap-6">
-    <flux:button :href="route('shows.show', $episode->show)" wire:navigate variant="outline" size="sm"
-        icon="arrow-left" class="self-start">{{ $episode->show->name }}</flux:button>
+    <x-back-button />
 
     @if ($episode->still_path)
         <img src="https://image.tmdb.org/t/p/w780{{ $episode->still_path }}" alt="{{ $episode->name }}"
