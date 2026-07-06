@@ -227,7 +227,7 @@ new class extends Component {
             </flux:button>
         @endunless
 
-        @if ($this->entry)
+        @if ($this->entry?->status === 'watchlist')
             <flux:button wire:click="remove" variant="danger" size="sm" icon="x-mark"
                 wire:confirm="{{ __('Smettere di seguire questo film?') }}">{{ __('Smetti di seguire') }}</flux:button>
         @endif
