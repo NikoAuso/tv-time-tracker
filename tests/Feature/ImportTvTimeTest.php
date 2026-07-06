@@ -3,6 +3,7 @@
 use App\Models\Episode;
 use App\Models\Show;
 use App\Models\User;
+use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,6 +46,23 @@ it('imports shows, library status, episodes and watches', function () {
     $house = Show::where('tvdb_id', 73255)->first();
     expect($house->name)->toBe('House');
     expect(WatchedEpisode::first()->watched_at->toDateString())->toBe('2024-09-23');
+});
+
+it('imports a watched movie with its watch date', function () {
+    $user = User::factory()->create();
+    $dir = fakeExport([]);
+
+    $handle = fopen($dir.'/tracking-prod-records.csv', 'w');
+    fputcsv($handle, ['uuid', 'movie_name', 'release_date', 'runtime', 'type', 'entity_type', 'updated_at']);
+    fputcsv($handle, ['m-1', 'Fury', '2014-10-15', '8040', 'watch', 'movie', '2024-09-22 16:52:34']);
+    fclose($handle);
+
+    $this->artisan('import:tvtime', ['path' => $dir, '--user' => $user->id])->assertSuccessful();
+
+    $entry = UserMovie::first();
+    expect($entry->status)->toBe('watched')
+        ->and($entry->watched_at)->not->toBeNull()
+        ->and($entry->watched_at->toDateString())->toBe('2024-09-22');
 });
 
 it('is idempotent when run twice', function () {

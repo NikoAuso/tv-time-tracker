@@ -122,7 +122,7 @@ class ImportTvTime extends Command
                 $movie = $cache[$uuid];
 
                 match ($row['type'] ?? '') {
-                    'watch' => $this->markMovieWatched($user, $movie, $counters),
+                    'watch' => $this->markMovieWatched($user, $movie, $row, $counters),
                     'towatch' => $this->markMovieWatchlist($user, $movie, $counters),
                     default => null,
                 };
@@ -133,13 +133,14 @@ class ImportTvTime extends Command
     }
 
     /**
+     * @param  array<string, string>  $row
      * @param  array<string, int>  $counters
      */
-    private function markMovieWatched(User $user, Movie $movie, array &$counters): void
+    private function markMovieWatched(User $user, Movie $movie, array $row, array &$counters): void
     {
         $entry = UserMovie::updateOrCreate(
             ['user_id' => $user->id, 'movie_id' => $movie->id],
-            ['status' => 'watched'],
+            ['status' => 'watched', 'watched_at' => $this->datetime($row['updated_at'] ?? null)],
         );
         if ($entry->wasRecentlyCreated) {
             $counters['watched']++;
