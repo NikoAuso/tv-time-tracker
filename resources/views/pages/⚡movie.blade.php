@@ -229,7 +229,7 @@ new class extends Component {
 
         @if ($this->entry?->status === 'watchlist')
             <x-remove-button wire:click="remove" size="sm" icon="x-mark"
-                wire:confirm="{{ __('Smettere di seguire questo film?') }}">{{ __('Smetti di seguire') }}</x-remove-button>
+                wire:confirm="{{ __('Smettere di seguire questo film?') }}">{{ __('Rimuovi') }}</x-remove-button>
         @endif
     </div>
 
