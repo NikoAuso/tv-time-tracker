@@ -12,14 +12,17 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-it('shows the followed shows in the library', function () {
+it('shows a followed show with no watched episode under "Da iniziare"', function () {
     $user = User::factory()->create();
     $show = Show::factory()->create(['name' => 'House']);
     UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id, 'status' => 'following']);
 
-    $this->actingAs($user)->get(route('library'))
-        ->assertOk()
-        ->assertSee('House');
+    Livewire::actingAs($user)->test('pages::library')
+        ->set('type', 'series')
+        ->set('status', 'watchlist')
+        ->assertSee('House')
+        ->set('status', 'in_progress')
+        ->assertDontSee('House');
 });
 
 it('filters the library by type', function () {
@@ -66,7 +69,9 @@ it('classifies series into da iniziare, in corso and concluse', function () {
 
     $inProgress = Show::factory()->create(['name' => 'InProgressShow']);
     UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $inProgress->id, 'status' => 'following']);
-    Episode::factory()->create(['show_id' => $inProgress->id, 'season_number' => 1, 'episode_number' => 1, 'air_date' => now()->subDay()]);
+    $ipSeen = Episode::factory()->create(['show_id' => $inProgress->id, 'season_number' => 1, 'episode_number' => 1, 'air_date' => now()->subDay()]);
+    WatchedEpisode::factory()->create(['user_id' => $user->id, 'episode_id' => $ipSeen->id]);
+    Episode::factory()->create(['show_id' => $inProgress->id, 'season_number' => 1, 'episode_number' => 2, 'air_date' => now()->subDay()]);
 
     $done = Show::factory()->create(['name' => 'DoneShow']);
     UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $done->id, 'status' => 'following']);

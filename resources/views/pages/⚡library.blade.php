@@ -27,7 +27,22 @@ new #[Title('Libreria')] class extends Component
     }
 
     /**
-     * Serie "concluse": almeno un episodio visto e nessun episodio già uscito ancora da vedere.
+     * Serie "iniziate": con almeno un episodio visto. Lo stato di libreria
+     * (following/watchlist/archived) non conta: a decidere è il numero di visti.
+     *
+     * @return Collection<int, int>
+     */
+    #[Computed]
+    public function startedShowIds()
+    {
+        return DB::table('watched_episodes')
+            ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
+            ->where('watched_episodes.user_id', Auth::id())
+            ->distinct()->pluck('episodes.show_id');
+    }
+
+    /**
+     * Serie "concluse": iniziate e senza episodi già usciti ancora da vedere.
      * Stesso criterio di episodio in sospeso della dashboard "Da guardare".
      *
      * @return Collection<int, int>
@@ -36,25 +51,16 @@ new #[Title('Libreria')] class extends Component
     public function concludedShowIds()
     {
         $userId = Auth::id();
-
-        $libraryShowIds = UserShow::where('user_id', $userId)
-            ->whereIn('status', ['following', 'archived'])
-            ->pluck('show_id');
+        $started = $this->startedShowIds;
 
         $withUnwatched = Episode::query()
-            ->whereIn('show_id', $libraryShowIds)
+            ->whereIn('show_id', $started)
             ->where('season_number', '>=', 1)
             ->whereDoesntHave('watches', fn ($q) => $q->where('user_id', $userId))
             ->where(fn ($q) => $q->whereNull('air_date')->orWhereDate('air_date', '<=', now()))
             ->distinct()->pluck('show_id');
 
-        $withWatched = DB::table('watched_episodes')
-            ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
-            ->where('watched_episodes.user_id', $userId)
-            ->whereIn('episodes.show_id', $libraryShowIds)
-            ->distinct()->pluck('episodes.show_id');
-
-        return $withWatched->diff($withUnwatched)->values();
+        return $started->diff($withUnwatched)->values();
     }
 
     /**
@@ -85,6 +91,7 @@ new #[Title('Libreria')] class extends Component
     private function seriesItems()
     {
         $userId = Auth::id();
+        $started = $this->startedShowIds;
         $concluded = $this->concludedShowIds;
 
         $counts = DB::table('watched_episodes')
@@ -97,12 +104,8 @@ new #[Title('Libreria')] class extends Component
         return UserShow::query()
             ->with('show')
             ->where('user_id', $userId)
-            ->when(
-                $this->status === 'watchlist',
-                fn ($q) => $q->where('status', 'watchlist'),
-                fn ($q) => $q->whereIn('status', ['following', 'archived']),
-            )
-            ->when($this->status === 'in_progress', fn ($q) => $q->whereNotIn('show_id', $concluded))
+            ->when($this->status === 'watchlist', fn ($q) => $q->whereNotIn('show_id', $started))
+            ->when($this->status === 'in_progress', fn ($q) => $q->whereIn('show_id', $started)->whereNotIn('show_id', $concluded))
             ->when($this->status === 'done', fn ($q) => $q->whereIn('show_id', $concluded))
             ->when($this->search !== '', fn ($q) => $q->whereHas('show', fn ($s) => $s->where('name', 'like', '%'.$this->search.'%')))
             ->get()
@@ -146,21 +149,22 @@ new #[Title('Libreria')] class extends Component
     public function statusCounts(): array
     {
         $userId = Auth::id();
+        $started = $this->startedShowIds;
 
-        $series = UserShow::where('user_id', $userId)
-            ->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
         $movies = UserMovie::where('user_id', $userId)
             ->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
 
-        $seriesLibrary = (int) ($series['following'] ?? 0) + (int) ($series['archived'] ?? 0);
-        $seriesDone = $this->concludedShowIds->count();
-        $seriesInProgress = max(0, $seriesLibrary - $seriesDone);
+        $seriesTotal = UserShow::where('user_id', $userId)->count();
+        $seriesStarted = UserShow::where('user_id', $userId)->whereIn('show_id', $started)->count();
+        $seriesDone = UserShow::where('user_id', $userId)->whereIn('show_id', $this->concludedShowIds)->count();
+        $seriesInProgress = max(0, $seriesStarted - $seriesDone);
+        $seriesNotStarted = max(0, $seriesTotal - $seriesStarted);
 
         $wantSeries = $this->type !== 'movies';
         $wantMovies = $this->type !== 'series';
 
         return [
-            'watchlist' => ($wantSeries ? (int) ($series['watchlist'] ?? 0) : 0) + ($wantMovies ? (int) ($movies['watchlist'] ?? 0) : 0),
+            'watchlist' => ($wantSeries ? $seriesNotStarted : 0) + ($wantMovies ? (int) ($movies['watchlist'] ?? 0) : 0),
             'in_progress' => $wantSeries ? $seriesInProgress : 0,
             'done' => ($wantSeries ? $seriesDone : 0) + ($wantMovies ? (int) ($movies['watched'] ?? 0) : 0),
         ];
