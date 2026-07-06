@@ -441,7 +441,7 @@ new class extends Component {
                     @foreach ($episodes as $episode)
                         <div class="flex items-center gap-3 py-2">
                             <flux:link :href="route('episodes.show', $episode)" wire:navigate
-                                class="flex min-w-0 flex-1 items-center gap-3 no-underline">
+                                class="flex! min-w-0 flex-1 items-center gap-3 no-underline">
                                 <div class="aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
                                     @if ($episode->still_path)
                                         <img src="https://image.tmdb.org/t/p/w185{{ $episode->still_path }}" alt=""
