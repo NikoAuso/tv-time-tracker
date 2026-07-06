@@ -228,8 +228,8 @@ new class extends Component {
         @endunless
 
         @if ($this->entry?->status === 'watchlist')
-            <flux:button wire:click="remove" variant="danger" size="sm" icon="x-mark"
-                wire:confirm="{{ __('Smettere di seguire questo film?') }}">{{ __('Smetti di seguire') }}</flux:button>
+            <x-remove-button wire:click="remove" size="sm" icon="x-mark"
+                wire:confirm="{{ __('Smettere di seguire questo film?') }}">{{ __('Smetti di seguire') }}</x-remove-button>
         @endif
     </div>
 
@@ -287,9 +287,9 @@ new class extends Component {
                 <flux:button wire:click="rewatch" icon="arrow-path" variant="primary">
                     {{ __('Visto di nuovo') }}
                 </flux:button>
-                <flux:button wire:click="unwatch" icon="x-mark" variant="danger">
+                <x-remove-button wire:click="unwatch" icon="x-mark">
                     {{ __('Rimuovi visto') }}
-                </flux:button>
+                </x-remove-button>
             </div>
         </div>
     </flux:modal>
