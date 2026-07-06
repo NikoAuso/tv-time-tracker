@@ -1,35 +1,78 @@
 <?php
 
+use App\Models\Episode;
 use App\Models\UserMovie;
 use App\Models\UserShow;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Libreria')] class extends Component {
+new #[Title('Libreria')] class extends Component
+{
     public string $search = '';
 
     public string $type = 'all';
 
-    public string $status = 'library';
+    public string $status = 'in_progress';
+
+    public function updatedType(): void
+    {
+        // "In corso" esiste solo per le serie: passando ai Film ripiego su "Visti".
+        if ($this->type === 'movies' && $this->status === 'in_progress') {
+            $this->status = 'done';
+        }
+    }
+
+    /**
+     * Serie "concluse": almeno un episodio visto e nessun episodio già uscito ancora da vedere.
+     * Stesso criterio di episodio in sospeso della dashboard "Da guardare".
+     *
+     * @return Collection<int, int>
+     */
+    #[Computed]
+    public function concludedShowIds()
+    {
+        $userId = Auth::id();
+
+        $libraryShowIds = UserShow::where('user_id', $userId)
+            ->whereIn('status', ['following', 'archived'])
+            ->pluck('show_id');
+
+        $withUnwatched = Episode::query()
+            ->whereIn('show_id', $libraryShowIds)
+            ->where('season_number', '>=', 1)
+            ->whereDoesntHave('watches', fn ($q) => $q->where('user_id', $userId))
+            ->where(fn ($q) => $q->whereNull('air_date')->orWhereDate('air_date', '<=', now()))
+            ->distinct()->pluck('show_id');
+
+        $withWatched = DB::table('watched_episodes')
+            ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
+            ->where('watched_episodes.user_id', $userId)
+            ->whereIn('episodes.show_id', $libraryShowIds)
+            ->distinct()->pluck('episodes.show_id');
+
+        return $withWatched->diff($withUnwatched)->values();
+    }
 
     /**
      * Serie e film uniti in un'unica lista, secondo i filtri tipo/stato.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     #[Computed]
     public function items()
     {
         $items = collect();
 
-        if ($this->type !== 'movies' && $this->status !== null) {
+        if ($this->type !== 'movies') {
             $items = $items->merge($this->seriesItems());
         }
 
-        if ($this->type !== 'series' && $this->status !== 'archived') {
+        // I film non hanno lo stato "In corso".
+        if ($this->type !== 'series' && $this->status !== 'in_progress') {
             $items = $items->merge($this->movieItems());
         }
 
@@ -37,27 +80,30 @@ new #[Title('Libreria')] class extends Component {
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function seriesItems()
     {
-        $seriesStatus = match ($this->status) {
-            'watchlist' => 'watchlist',
-            'archived' => 'archived',
-            default => 'following',
-        };
+        $userId = Auth::id();
+        $concluded = $this->concludedShowIds;
 
         $counts = DB::table('watched_episodes')
             ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
-            ->where('watched_episodes.user_id', Auth::id())
+            ->where('watched_episodes.user_id', $userId)
             ->groupBy('episodes.show_id')
             ->selectRaw('episodes.show_id as show_id, count(*) as c')
             ->pluck('c', 'show_id');
 
         return UserShow::query()
             ->with('show')
-            ->where('user_id', Auth::id())
-            ->where('status', $seriesStatus)
+            ->where('user_id', $userId)
+            ->when(
+                $this->status === 'watchlist',
+                fn ($q) => $q->where('status', 'watchlist'),
+                fn ($q) => $q->whereIn('status', ['following', 'archived']),
+            )
+            ->when($this->status === 'in_progress', fn ($q) => $q->whereNotIn('show_id', $concluded))
+            ->when($this->status === 'done', fn ($q) => $q->whereIn('show_id', $concluded))
             ->when($this->search !== '', fn ($q) => $q->whereHas('show', fn ($s) => $s->where('name', 'like', '%'.$this->search.'%')))
             ->get()
             ->map(fn (UserShow $us) => [
@@ -70,7 +116,7 @@ new #[Title('Libreria')] class extends Component {
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function movieItems()
     {
@@ -99,18 +145,24 @@ new #[Title('Libreria')] class extends Component {
     #[Computed]
     public function statusCounts(): array
     {
-        $series = UserShow::where('user_id', Auth::id())
+        $userId = Auth::id();
+
+        $series = UserShow::where('user_id', $userId)
             ->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
-        $movies = UserMovie::where('user_id', Auth::id())
+        $movies = UserMovie::where('user_id', $userId)
             ->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
+
+        $seriesLibrary = (int) ($series['following'] ?? 0) + (int) ($series['archived'] ?? 0);
+        $seriesDone = $this->concludedShowIds->count();
+        $seriesInProgress = max(0, $seriesLibrary - $seriesDone);
 
         $wantSeries = $this->type !== 'movies';
         $wantMovies = $this->type !== 'series';
 
         return [
-            'library' => ($wantSeries ? (int) ($series['following'] ?? 0) : 0) + ($wantMovies ? (int) ($movies['watched'] ?? 0) : 0),
             'watchlist' => ($wantSeries ? (int) ($series['watchlist'] ?? 0) : 0) + ($wantMovies ? (int) ($movies['watchlist'] ?? 0) : 0),
-            'archived' => $wantSeries ? (int) ($series['archived'] ?? 0) : 0,
+            'in_progress' => $wantSeries ? $seriesInProgress : 0,
+            'done' => ($wantSeries ? $seriesDone : 0) + ($wantMovies ? (int) ($movies['watched'] ?? 0) : 0),
         ];
     }
 }; ?>
@@ -121,6 +173,14 @@ new #[Title('Libreria')] class extends Component {
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
             placeholder="{{ __('Cerca...') }}" class="max-w-xs" />
     </div>
+
+    @php
+        $statusOptions = match ($type) {
+            'series' => ['watchlist' => 'Da iniziare', 'in_progress' => 'In corso', 'done' => 'Concluse'],
+            'movies' => ['watchlist' => 'Da vedere', 'done' => 'Visti'],
+            default => ['watchlist' => 'Da vedere', 'in_progress' => 'In corso', 'done' => 'Concluse / Viste'],
+        };
+    @endphp
 
     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div class="flex gap-2">
@@ -133,16 +193,14 @@ new #[Title('Libreria')] class extends Component {
         <flux:separator vertical class="h-6 max-sm:hidden" />
 
         <div class="flex flex-wrap gap-2">
-            @foreach (['library' => 'Visti / In corso', 'watchlist' => 'Da vedere', 'archived' => 'Archiviate'] as $key => $label)
-                @if ($key !== 'archived' || $type !== 'movies')
-                    <flux:button size="sm" wire:click="$set('status', '{{ $key }}')"
-                        :variant="$status === $key ? 'primary' : 'ghost'">
-                        {{ __($label) }}
-                        <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {{ $status === $key ? 'bg-white/25 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' }}">
-                            {{ $this->statusCounts[$key] ?? 0 }}
-                        </span>
-                    </flux:button>
-                @endif
+            @foreach ($statusOptions as $key => $label)
+                <flux:button size="sm" wire:click="$set('status', '{{ $key }}')"
+                    :variant="$status === $key ? 'primary' : 'ghost'">
+                    {{ __($label) }}
+                    <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {{ $status === $key ? 'bg-white/25 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' }}">
+                        {{ $this->statusCounts[$key] ?? 0 }}
+                    </span>
+                </flux:button>
             @endforeach
         </div>
     </div>
