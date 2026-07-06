@@ -65,6 +65,25 @@ it('imports a watched movie with its watch date', function () {
         ->and($entry->watched_at->toDateString())->toBe('2024-09-22');
 });
 
+it('imports movie rewatch counts keeping the highest', function () {
+    $user = User::factory()->create();
+    $dir = fakeExport([]);
+
+    $handle = fopen($dir.'/tracking-prod-records.csv', 'w');
+    fputcsv($handle, ['uuid', 'movie_name', 'release_date', 'runtime', 'type', 'entity_type', 'updated_at', 'rewatch_count']);
+    fputcsv($handle, ['m-1', 'Hacksaw Ridge', '2016-11-04', '8760', 'watch', 'movie', '2024-09-22 16:52:34', '']);
+    fputcsv($handle, ['m-1', 'Hacksaw Ridge', '2016-11-04', '8760', 'rewatch', 'movie', '', '1']);
+    fputcsv($handle, ['m-1', 'Hacksaw Ridge', '2016-11-04', '8760', 'rewatch', 'movie', '', '3']);
+    fputcsv($handle, ['m-1', 'Hacksaw Ridge', '2016-11-04', '8760', 'rewatch', 'movie', '', '2']);
+    fclose($handle);
+
+    $this->artisan('import:tvtime', ['path' => $dir, '--user' => $user->id])->assertSuccessful();
+
+    $entry = UserMovie::first();
+    expect($entry->status)->toBe('watched')
+        ->and($entry->rewatch_count)->toBe(3);
+});
+
 it('is idempotent when run twice', function () {
     $user = User::factory()->create();
     $dir = fakeExport([

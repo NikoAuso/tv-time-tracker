@@ -69,10 +69,10 @@ class ImportTvTime extends Command
 
         $this->info("Import completato per l'utente #{$user->id}:");
         $this->table(
-            ['Serie (nuove)', 'In libreria', 'Episodi', 'Visti', 'Film', 'Film visti', 'Watchlist'],
+            ['Serie (nuove)', 'In libreria', 'Episodi', 'Visti', 'Film', 'Film visti', 'Watchlist', 'Rivisti'],
             [[
                 $counters['shows'], $counters['library'], $counters['episodes'], $counters['watched'],
-                $movieCounters['movies'], $movieCounters['watched'], $movieCounters['watchlist'],
+                $movieCounters['movies'], $movieCounters['watched'], $movieCounters['watchlist'], $movieCounters['rewatched'],
             ]],
         );
 
@@ -86,7 +86,7 @@ class ImportTvTime extends Command
      */
     private function importMovies(string $path, User $user): array
     {
-        $counters = ['movies' => 0, 'watched' => 0, 'watchlist' => 0];
+        $counters = ['movies' => 0, 'watched' => 0, 'watchlist' => 0, 'rewatched' => 0];
         $file = $path.'/tracking-prod-records.csv';
 
         if (! is_readable($file)) {
@@ -124,6 +124,7 @@ class ImportTvTime extends Command
                 match ($row['type'] ?? '') {
                     'watch' => $this->markMovieWatched($user, $movie, $row, $counters),
                     'towatch' => $this->markMovieWatchlist($user, $movie, $counters),
+                    'rewatch' => $this->markMovieRewatch($user, $movie, $row, $counters),
                     default => null,
                 };
             }
@@ -144,6 +145,33 @@ class ImportTvTime extends Command
         );
         if ($entry->wasRecentlyCreated) {
             $counters['watched']++;
+        }
+    }
+
+    /**
+     * Applica il conteggio delle rivisioni: le righe "rewatch" arrivano
+     * incrementali (1, 2, 3…), quindi si tiene il massimo per film.
+     *
+     * @param  array<string, string>  $row
+     * @param  array<string, int>  $counters
+     */
+    private function markMovieRewatch(User $user, Movie $movie, array $row, array &$counters): void
+    {
+        $count = (int) ($row['rewatch_count'] ?? 0);
+        if ($count <= 0) {
+            return;
+        }
+
+        $entry = UserMovie::firstOrCreate(
+            ['user_id' => $user->id, 'movie_id' => $movie->id],
+            ['status' => 'watched'],
+        );
+
+        if ($count > $entry->rewatch_count) {
+            if ($entry->rewatch_count === 0) {
+                $counters['rewatched']++;
+            }
+            $entry->update(['rewatch_count' => $count]);
         }
     }
 
