@@ -275,7 +275,7 @@ new class extends Component {
                 @endif
 
                 @if ($this->userShow)
-                    <flux:button wire:click="remove" variant="danger" size="sm"
+                    <flux:button wire:click="remove" variant="danger" size="sm" icon="trash"
                         wire:confirm="{{ __('Rimuovere la serie dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
             </div>

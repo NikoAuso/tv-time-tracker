@@ -134,12 +134,12 @@ new class extends Component {
 
                 @unless ($this->entry)
                     <flux:button wire:click="addWatchlist" icon="bookmark" variant="outline">
-                        {{ __('Watchlist') }}
+                        {{ __('Da guardare') }}
                     </flux:button>
                 @endunless
 
                 @if ($this->entry)
-                    <flux:button wire:click="remove" variant="danger" size="sm"
+                    <flux:button wire:click="remove" variant="danger" size="sm" icon="trash"
                         wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
             </div>

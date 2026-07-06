@@ -153,7 +153,7 @@ new #[Title('Importa dati')] class extends Component {
                 @if (Auth::user()->hasTmdbToken())
                     <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
                         <flux:text>{{ __('Un token è attivo.') }}</flux:text>
-                        <flux:button size="sm" variant="danger" wire:click="removeToken"
+                        <flux:button size="sm" variant="danger" icon="trash" wire:click="removeToken"
                             wire:confirm="{{ __('Rimuovere il token TMDB?') }}">{{ __('Rimuovi') }}</flux:button>
                     </div>
                 @endif
