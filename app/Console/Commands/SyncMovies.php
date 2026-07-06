@@ -76,6 +76,7 @@ class SyncMovies extends Command
             'poster_path' => $match['poster_path'] ?? $movie->poster_path,
             'overview' => $match['overview'] ?? $movie->overview,
             'release_date' => ($match['release_date'] ?? '') ?: $movie->release_date,
+            'runtime' => $detail['runtime'] ?? $movie->runtime,
             'genres' => $detail ? array_column($detail['genres'] ?? [], 'name') : $movie->genres,
         ])->save();
         $counters['synced']++;

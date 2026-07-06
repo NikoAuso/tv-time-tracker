@@ -61,9 +61,11 @@ class Tmdb
     }
 
     /**
-     * Cerca un film per titolo. Con l'anno sceglie il risultato più vicino:
-     * le date importate da TV Time sono spesso sfasate di 1-2 anni rispetto
-     * al primary_release_year di TMDB, quindi un filtro esatto perde il match.
+     * Cerca un film per titolo. Preferisce i risultati il cui titolo (o titolo
+     * originale) coincide con la query, così un omonimo oscuro con l'anno più
+     * vicino non scavalca il film giusto; tra i candidati sceglie l'anno più
+     * vicino, perché le date importate da TV Time sono spesso sfasate di 1-2
+     * anni. Senza corrispondenza esatta ripiega sull'ordine di rilevanza TMDB.
      *
      * @return array<string, mixed>|null
      */
@@ -71,18 +73,35 @@ class Tmdb
     {
         $results = $this->searchMovies($title);
 
-        if ($results === [] || $year === null) {
-            return $results[0] ?? null;
+        if ($results === []) {
+            return null;
         }
 
-        usort($results, function (array $a, array $b) use ($year): int {
+        $normalize = fn (string $value): string => (string) preg_replace('/[^a-z0-9]/', '', mb_strtolower($value));
+        $query = $normalize($title);
+
+        $exact = array_values(array_filter($results, fn (array $r): bool => $normalize((string) ($r['title'] ?? '')) === $query
+            || $normalize((string) ($r['original_title'] ?? '')) === $query));
+
+        // Senza match di titolo e senza anno, l'ordine di rilevanza TMDB è la scelta migliore.
+        if ($exact === [] && $year === null) {
+            return $results[0];
+        }
+
+        $pool = $exact !== [] ? $exact : $results;
+
+        if ($year === null) {
+            return $pool[0];
+        }
+
+        usort($pool, function (array $a, array $b) use ($year): int {
             $ya = (int) substr((string) ($a['release_date'] ?? ''), 0, 4);
             $yb = (int) substr((string) ($b['release_date'] ?? ''), 0, 4);
 
             return abs($ya - $year) <=> abs($yb - $year);
         });
 
-        return $results[0];
+        return $pool[0];
     }
 
     /**
