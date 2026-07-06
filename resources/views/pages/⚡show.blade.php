@@ -50,17 +50,21 @@ new class extends Component {
 
     public function rate(int $stars): void
     {
-        UserShow::updateOrCreate(
+        $entry = UserShow::firstOrCreate(
             ['user_id' => Auth::id(), 'show_id' => $this->show->id],
-            ['rating' => $stars >= 1 ? min($stars, 5) : null],
+            ['status' => 'watchlist'],
         );
+        $entry->update(['rating' => $stars >= 1 ? min($stars, 5) : null]);
 
         unset($this->userShow);
     }
 
     public function toggleFavorite(): void
     {
-        $entry = UserShow::firstOrCreate(['user_id' => Auth::id(), 'show_id' => $this->show->id]);
+        $entry = UserShow::firstOrCreate(
+            ['user_id' => Auth::id(), 'show_id' => $this->show->id],
+            ['status' => 'watchlist'],
+        );
         $entry->update(['is_favorite' => ! $entry->is_favorite]);
 
         unset($this->userShow);

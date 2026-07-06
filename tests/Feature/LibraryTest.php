@@ -169,6 +169,17 @@ it('promotes a "da vedere" series to following when an episode is watched', func
         ->toBe('following');
 });
 
+it('adds a never-watched series as watchlist when favorited or rated', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('toggleFavorite');
+
+    expect(UserShow::where('user_id', $user->id)->where('show_id', $show->id)->value('status'))
+        ->toBe('watchlist');
+});
+
 it('removes a series from the library', function () {
     $user = User::factory()->create();
     $show = Show::factory()->create();
