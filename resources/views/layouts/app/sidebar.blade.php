@@ -62,7 +62,7 @@
             <div class="grid h-14 grid-cols-5 items-center">
                 @foreach ($tabs as [$route, $icon, $label, $active])
                     <a href="{{ route($route) }}" wire:navigate
-                        class="flex w-full flex-col items-center justify-center gap-1 text-center text-[11px] no-underline {{ $active ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}">
+                        class="flex w-full flex-col items-center justify-center gap-1 text-center text-[11px] no-underline {{ $active ? 'font-semibold text-accent' : 'text-zinc-400 dark:text-zinc-500' }}">
                         <x-dynamic-component :component="'flux::icon.'.$icon" :variant="$active ? 'solid' : 'outline'" class="size-6" />
                         <span>{{ __($label) }}</span>
                     </a>
