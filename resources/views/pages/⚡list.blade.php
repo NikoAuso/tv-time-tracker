@@ -81,7 +81,7 @@ new class extends Component {
             {{ __('Lista vuota. Aggiungi serie o film dalle loro pagine.') }}
         </flux:text>
     @else
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             @foreach ($this->items as $item)
                 <div class="group relative flex flex-col gap-2">
                     <flux:link :href="$item['href']" wire:navigate class="flex flex-col gap-2 no-underline">

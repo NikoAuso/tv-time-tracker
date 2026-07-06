@@ -173,7 +173,7 @@ new #[Title('Cerca')] class extends Component {
             @if (empty($results))
                 <flux:text class="py-12 text-center text-zinc-500">{{ __('Nessun risultato.') }}</flux:text>
             @elseif ($view === 'grid')
-                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     @foreach ($results as $item)
                         @include('partials.search-card', ['item' => $item, 'type' => $type])
                     @endforeach
@@ -216,7 +216,7 @@ new #[Title('Cerca')] class extends Component {
             @if (empty($browseItems))
                 <flux:text class="py-12 text-center text-zinc-500">{{ __('Nessun contenuto di tendenza.') }}</flux:text>
             @else
-                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     @foreach ($browseItems as $item)
                         @include('partials.search-card', ['item' => $item, 'type' => $browse])
                     @endforeach

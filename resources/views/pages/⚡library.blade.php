@@ -207,7 +207,7 @@ new #[Title('Libreria')] class extends Component
     @if ($this->items->isEmpty())
         <flux:text class="py-12 text-center">{{ __('Niente in questa sezione.') }}</flux:text>
     @else
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             @foreach ($this->items as $item)
                 @php $inner = view('partials.library-card', ['item' => $item])->render(); @endphp
                 @if ($item['href'])
