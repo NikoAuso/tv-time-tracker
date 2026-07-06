@@ -67,12 +67,16 @@ class SyncMovies extends Command
             return;
         }
 
+        // La ricerca non include i generi: serve il dettaglio del film.
+        $detail = isset($match['id']) ? $tmdb->getMovie((int) $match['id']) : null;
+
         $movie->fill([
             'tmdb_id' => $match['id'] ?? null,
             'title' => $match['title'] ?? $movie->title,
             'poster_path' => $match['poster_path'] ?? $movie->poster_path,
             'overview' => $match['overview'] ?? $movie->overview,
             'release_date' => ($match['release_date'] ?? '') ?: $movie->release_date,
+            'genres' => $detail ? array_column($detail['genres'] ?? [], 'name') : $movie->genres,
         ])->save();
         $counters['synced']++;
     }

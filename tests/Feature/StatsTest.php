@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 
 it('renders stats for the current user only', function () {
     $user = User::factory()->create();
-    $house = Show::factory()->create(['name' => 'House']);
+    $house = Show::factory()->create(['name' => 'House', 'genres' => ['Dramma', 'Mistero']]);
     UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $house->id, 'status' => 'following']);
 
     Episode::factory()->count(3)
@@ -36,18 +36,22 @@ it('renders stats for the current user only', function () {
         ->assertSee('House')
         ->assertSee('Maratone')
         ->assertSee('Giornata record')
+        ->assertSee('Generi')
+        ->assertSee('Dramma')
         ->assertDontSee('SecretShow');
 });
 
 it('shows movie stats on the film tab', function () {
     $user = User::factory()->create();
-    $movie = Movie::factory()->create(['title' => 'Fury', 'runtime' => 134, 'release_date' => '2014-10-15']);
+    $movie = Movie::factory()->create(['title' => 'Fury', 'runtime' => 134, 'release_date' => '2014-10-15', 'genres' => ['Guerra']]);
     UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $movie->id, 'status' => 'watched']);
 
     Livewire::actingAs($user)->test('pages::stats')
         ->set('tab', 'movies')
         ->assertSee('Durata media')
         ->assertSee('Maratone')
+        ->assertSee('Generi')
+        ->assertSee('Guerra')
         ->assertSee('Film visti per decennio')
         ->assertSee('Anni 2010');
 });

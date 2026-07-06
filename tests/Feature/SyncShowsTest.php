@@ -24,6 +24,7 @@ it('enriches a show and imports its full episode list from TMDB', function () {
             'first_air_date' => '2004-11-16',
             'number_of_episodes' => 176,
             'status' => 'Ended',
+            'genres' => [['id' => 18, 'name' => 'Dramma']],
             'seasons' => [['season_number' => 1]],
         ]),
     ]);
@@ -37,7 +38,8 @@ it('enriches a show and imports its full episode list from TMDB', function () {
         ->and($show->poster_path)->toBe('/house.jpg')
         ->and($show->total_episodes)->toBe(176)
         ->and($show->status)->toBe('Ended')
-        ->and($show->name)->toBe('House');
+        ->and($show->name)->toBe('House')
+        ->and($show->genres)->toBe(['Dramma']);
 
     expect(Episode::where('show_id', $show->id)->count())->toBe(2);
     $pilot = Episode::where('show_id', $show->id)->where('episode_number', 1)->first();

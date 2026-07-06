@@ -51,6 +51,7 @@ class UserData
             'first_air_date' => $us->show->first_air_date?->toDateString(),
             'total_episodes' => $us->show->total_episodes,
             'air_status' => $us->show->status,
+            'genres' => $us->show->genres,
             'status' => $us->status,
             'is_favorite' => $us->is_favorite,
             'rating' => $us->rating,
@@ -72,6 +73,7 @@ class UserData
             'poster_path' => $um->movie->poster_path,
             'release_date' => $um->movie->release_date?->toDateString(),
             'runtime' => $um->movie->runtime,
+            'genres' => $um->movie->genres,
             'status' => $um->status,
             'is_favorite' => $um->is_favorite,
             'rating' => $um->rating,
@@ -177,6 +179,7 @@ class UserData
             'first_air_date' => $s['first_air_date'] ?? null,
             'total_episodes' => $s['total_episodes'] ?? null,
             'status' => $s['air_status'] ?? null,
+            'genres' => $s['genres'] ?? null,
         ]);
 
         // Show è un record di catalogo condiviso fra gli utenti: firstOrCreate, mai
@@ -198,6 +201,7 @@ class UserData
             'poster_path' => $m['poster_path'] ?? null,
             'release_date' => $m['release_date'] ?? null,
             'runtime' => $m['runtime'] ?? null,
+            'genres' => $m['genres'] ?? null,
         ]);
 
         // Movie è un record di catalogo condiviso: firstOrCreate, mai overwrite.

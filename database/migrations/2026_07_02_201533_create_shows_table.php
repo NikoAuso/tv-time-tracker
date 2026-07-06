@@ -18,6 +18,7 @@ return new class extends Migration
             $table->date('first_air_date')->nullable();
             $table->unsignedInteger('total_episodes')->nullable();
             $table->string('status')->nullable();
+            $table->json('genres')->nullable();
             $table->timestamps();
         });
     }

@@ -34,6 +34,7 @@ class TmdbLibrary
                 'first_air_date' => ($data['first_air_date'] ?? '') ?: null,
                 'total_episodes' => $data['number_of_episodes'] ?? null,
                 'status' => $data['status'] ?? null,
+                'genres' => array_column($data['genres'] ?? [], 'name'),
             ],
         );
 
@@ -86,6 +87,7 @@ class TmdbLibrary
                 'overview' => $data['overview'] ?? null,
                 'release_date' => ($data['release_date'] ?? '') ?: null,
                 'runtime' => $data['runtime'] ?? null,
+                'genres' => array_column($data['genres'] ?? [], 'name'),
             ],
         );
 

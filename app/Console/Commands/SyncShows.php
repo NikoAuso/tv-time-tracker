@@ -83,6 +83,7 @@ class SyncShows extends Command
             'first_air_date' => ($data['first_air_date'] ?? '') ?: null,
             'total_episodes' => $data['number_of_episodes'] ?? null,
             'status' => $data['status'] ?? null,
+            'genres' => array_column($data['genres'] ?? [], 'name'),
         ])->save();
         $counters['synced']++;
 

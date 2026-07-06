@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('poster_path')->nullable();
             $table->text('overview')->nullable();
             $table->unsignedInteger('runtime')->nullable();
+            $table->json('genres')->nullable();
             $table->timestamps();
         });
     }

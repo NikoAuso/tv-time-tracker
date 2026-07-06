@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\UserMovie;
+use App\Models\UserShow;
 use App\Services\WatchTime;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -139,6 +141,21 @@ new #[Title('Statistiche')] class extends Component {
         ];
     }
 
+    /**
+     * Generi più presenti fra le serie in libreria (una serie ha più generi).
+     *
+     * @return array<string, int>
+     */
+    #[Computed]
+    public function seriesGenres(): array
+    {
+        return UserShow::where('user_id', Auth::id())
+            ->with('show:id,genres')
+            ->get()
+            ->flatMap(fn (UserShow $us) => $us->show->genres ?? [])
+            ->countBy()->sortDesc()->take(8)->all();
+    }
+
     // ---- Film ----
 
     #[Computed]
@@ -223,6 +240,21 @@ new #[Title('Statistiche')] class extends Component {
                 ->groupBy('day')->pluck('c', 'day'),
         );
     }
+
+    /**
+     * Generi più presenti fra i film visti.
+     *
+     * @return array<string, int>
+     */
+    #[Computed]
+    public function moviesGenres(): array
+    {
+        return UserMovie::where('user_id', Auth::id())->where('status', 'watched')
+            ->with('movie:id,genres')
+            ->get()
+            ->flatMap(fn (UserMovie $um) => $um->movie->genres ?? [])
+            ->countBy()->sortDesc()->take(8)->all();
+    }
 }; ?>
 
 @php
@@ -303,6 +335,7 @@ new #[Title('Statistiche')] class extends Component {
                 @endforeach
             </div>
         </div>
+        @include('partials.genre-bars', ['genres' => $this->seriesGenres])
     @else
         @php $maxDecade = $this->moviesByDecade->max('c') ?: 1; @endphp
 
@@ -342,5 +375,7 @@ new #[Title('Statistiche')] class extends Component {
                 </div>
             @endif
         </div>
+
+        @include('partials.genre-bars', ['genres' => $this->moviesGenres])
     @endif
 </div>

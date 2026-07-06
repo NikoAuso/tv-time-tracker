@@ -22,10 +22,11 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $first_air_date
  * @property int|null $total_episodes
  * @property string|null $status
+ * @property array<int, string>|null $genres
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['tmdb_id', 'tvdb_id', 'name', 'poster_path', 'overview', 'first_air_date', 'total_episodes', 'status'])]
+#[Fillable(['tmdb_id', 'tvdb_id', 'name', 'poster_path', 'overview', 'first_air_date', 'total_episodes', 'status', 'genres'])]
 class Show extends Model
 {
     /** @use HasFactory<ShowFactory> */
@@ -50,6 +51,7 @@ class Show extends Model
     {
         return [
             'first_air_date' => 'date',
+            'genres' => 'array',
         ];
     }
 }

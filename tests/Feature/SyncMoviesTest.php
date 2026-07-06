@@ -17,6 +17,10 @@ it('enriches a movie from TMDB by title and year', function () {
             'overview' => 'A tank crew in WWII.',
             'release_date' => '2014-10-17',
         ]]]),
+        'https://api.themoviedb.org/3/movie/16869*' => Http::response([
+            'id' => 16869,
+            'genres' => [['id' => 10752, 'name' => 'Guerra'], ['id' => 18, 'name' => 'Dramma']],
+        ]),
     ]);
 
     $movie = Movie::factory()->create(['tmdb_id' => null, 'title' => 'Fury', 'release_date' => '2014-10-17']);
@@ -26,7 +30,8 @@ it('enriches a movie from TMDB by title and year', function () {
     $movie->refresh();
     expect($movie->tmdb_id)->toBe(16869)
         ->and($movie->poster_path)->toBe('/fury.jpg')
-        ->and($movie->overview)->toBe('A tank crew in WWII.');
+        ->and($movie->overview)->toBe('A tank crew in WWII.')
+        ->and($movie->genres)->toBe(['Guerra', 'Dramma']);
 });
 
 it('leaves a movie unresolved when TMDB has no match', function () {
