@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\UserData;
 use Flux\Flux;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,42 @@ new #[Title('Importa dati')] class extends Component {
 
     public $archive;
 
+    public $jsonFile;
+
     public string $tmdbToken = '';
+
+    public function exportJson()
+    {
+        $json = (string) json_encode(
+            UserData::export((int) Auth::id()),
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        );
+
+        return response()->streamDownload(
+            fn () => print ($json),
+            'tv-time-tracker-'.now()->format('Y-m-d').'.json',
+            ['Content-Type' => 'application/json'],
+        );
+    }
+
+    public function importJson(): void
+    {
+        $this->validate(['jsonFile' => ['required', 'file', 'max:51200']]);
+
+        $data = json_decode((string) file_get_contents($this->jsonFile->getRealPath()), true);
+
+        if (! is_array($data) || ($data['app'] ?? null) !== UserData::APP) {
+            $this->addError('jsonFile', __('File non valido: non è un backup di TvTimeTracker.'));
+
+            return;
+        }
+
+        UserData::import((int) Auth::id(), $data);
+
+        $this->reset('jsonFile');
+
+        Flux::toast(variant: 'success', text: __('Dati importati.'));
+    }
 
     public function saveToken(): void
     {
@@ -185,6 +221,29 @@ new #[Title('Importa dati')] class extends Component {
             <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
                 <flux:icon.arrow-path class="size-4 animate-spin" />
                 {{ __('Importazione e sincronizzazione in corso… può richiedere qualche minuto.') }}
+            </div>
+
+            <flux:separator />
+
+            <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-1">
+                    <flux:heading size="sm">{{ __('Backup TvTimeTracker') }}</flux:heading>
+                    <flux:text size="sm" class="text-zinc-500">
+                        {{ __('Esporta tutti i tuoi dati in JSON, o importa un backup creato da questa app (unione, mai duplicati).') }}
+                    </flux:text>
+                </div>
+
+                <flux:button wire:click="exportJson" variant="primary" icon="arrow-down-tray" class="self-start">
+                    {{ __('Esporta dati (JSON)') }}
+                </flux:button>
+
+                <form wire:submit="importJson" class="flex flex-col gap-3">
+                    <flux:input type="file" wire:model="jsonFile" accept=".json" :label="__('Backup .json')" />
+                    <flux:error name="jsonFile" />
+                    <flux:button type="submit" variant="primary" icon="arrow-up-tray" class="self-start">
+                        {{ __('Importa backup') }}
+                    </flux:button>
+                </form>
             </div>
         </div>
     </x-pages::settings.layout>
