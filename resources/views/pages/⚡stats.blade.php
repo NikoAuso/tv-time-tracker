@@ -180,7 +180,7 @@ new #[Title('Statistiche')] class extends Component {
     <div class="flex gap-2">
         @foreach (['series' => __('Serie'), 'movies' => __('Film')] as $key => $label)
             <flux:button size="sm" wire:click="$set('tab', '{{ $key }}')"
-                :variant="$tab === $key ? 'primary' : 'ghost'">{{ $label }}</flux:button>
+                :variant="$tab === $key ? 'primary' : 'outline'">{{ $label }}</flux:button>
         @endforeach
     </div>
 

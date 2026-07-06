@@ -156,15 +156,15 @@ new #[Title('Cerca')] class extends Component {
                 <div class="flex gap-2">
                     @foreach (['series' => __('Serie'), 'movies' => __('Film')] as $key => $label)
                         <flux:button size="sm" wire:click="$set('type', '{{ $key }}')"
-                            :variant="$type === $key ? 'primary' : 'ghost'">{{ $label }}</flux:button>
+                            :variant="$type === $key ? 'primary' : 'outline'">{{ $label }}</flux:button>
                     @endforeach
                 </div>
 
                 <div class="flex gap-1">
                     <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
-                        :variant="$view === 'list' ? 'primary' : 'ghost'" aria-label="{{ __('Lista') }}" />
+                        :variant="$view === 'list' ? 'primary' : 'outline'" aria-label="{{ __('Lista') }}" />
                     <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
-                        :variant="$view === 'grid' ? 'primary' : 'ghost'" aria-label="{{ __('Griglia') }}" />
+                        :variant="$view === 'grid' ? 'primary' : 'outline'" aria-label="{{ __('Griglia') }}" />
                 </div>
             </div>
 
@@ -192,7 +192,7 @@ new #[Title('Cerca')] class extends Component {
                                 </flux:text>
                             </div>
                             @if ($item['href'])
-                                <flux:button :href="$item['href']" wire:navigate size="sm" variant="ghost" icon="check">
+                                <flux:button :href="$item['href']" wire:navigate size="sm" variant="outline" icon="check">
                                     {{ __('In libreria') }}
                                 </flux:button>
                             @else
@@ -210,7 +210,7 @@ new #[Title('Cerca')] class extends Component {
                 $browseTitle = $browse === 'movies' ? __('Film di tendenza') : __('Serie di tendenza');
             @endphp
             <div class="flex items-center gap-2">
-                <flux:button wire:click="$set('browse', '')" variant="ghost" size="sm" icon="arrow-left">{{ __('Indietro') }}</flux:button>
+                <flux:button wire:click="$set('browse', '')" variant="outline" size="sm" icon="arrow-left">{{ __('Indietro') }}</flux:button>
                 <flux:heading size="lg">{{ $browseTitle }}</flux:heading>
             </div>
             @if (empty($browseItems))

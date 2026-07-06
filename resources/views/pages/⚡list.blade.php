@@ -64,13 +64,13 @@ new class extends Component {
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <flux:button :href="route('lists')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="self-start">
+    <flux:button :href="route('lists')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
         {{ __('Liste') }}
     </flux:button>
 
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="truncate">{{ $userList->name }}</flux:heading>
-        <flux:button variant="ghost" size="sm" icon="trash" class="shrink-0"
+        <flux:button variant="outline" size="sm" icon="trash" class="shrink-0"
             wire:click="delete"
             wire:confirm="{{ __('Eliminare la lista «:name»?', ['name' => $userList->name]) }}"
             aria-label="{{ __('Elimina lista') }}" />

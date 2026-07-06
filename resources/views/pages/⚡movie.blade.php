@@ -104,7 +104,7 @@ new class extends Component {
 }; ?>
 
 <div class="flex max-w-2xl flex-col gap-6">
-    <flux:button :href="route('library')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="self-start">
+    <flux:button :href="route('library')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
         {{ __('Libreria') }}
     </flux:button>
 
@@ -141,7 +141,7 @@ new class extends Component {
                 @endunless
 
                 @if ($this->entry)
-                    <flux:button wire:click="remove" variant="ghost" size="sm"
+                    <flux:button wire:click="remove" variant="outline" size="sm"
                         wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
             </div>

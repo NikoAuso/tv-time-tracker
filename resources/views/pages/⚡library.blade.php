@@ -185,7 +185,7 @@ new #[Title('Libreria')] class extends Component
         <div class="flex gap-2">
             @foreach (['series' => 'Serie', 'movies' => 'Film'] as $key => $label)
                 <flux:button size="sm" wire:click="$set('type', '{{ $key }}')"
-                    :variant="$type === $key ? 'primary' : 'ghost'">{{ __($label) }}</flux:button>
+                    :variant="$type === $key ? 'primary' : 'outline'">{{ __($label) }}</flux:button>
             @endforeach
         </div>
 
@@ -194,7 +194,7 @@ new #[Title('Libreria')] class extends Component
         <div class="flex flex-wrap gap-2">
             @foreach ($statusOptions as $key => $label)
                 <flux:button size="sm" wire:click="$set('status', '{{ $key }}')"
-                    :variant="$status === $key ? 'primary' : 'ghost'">
+                    :variant="$status === $key ? 'primary' : 'outline'">
                     {{ __($label) }}
                     <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {{ $status === $key ? 'bg-[var(--color-accent-foreground)]/20 text-[var(--color-accent-foreground)]' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' }}">
                         {{ $this->statusCounts[$key] ?? 0 }}

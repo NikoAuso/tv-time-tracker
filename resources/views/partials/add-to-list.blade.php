@@ -1,7 +1,7 @@
 @props(['lists', 'activeIds' => []])
 
 <flux:dropdown position="bottom" align="start">
-    <flux:button icon="list-bullet" variant="ghost" size="sm">{{ __('Liste') }}</flux:button>
+    <flux:button icon="list-bullet" variant="outline" size="sm">{{ __('Liste') }}</flux:button>
 
     <flux:menu>
         @forelse ($lists as $list)

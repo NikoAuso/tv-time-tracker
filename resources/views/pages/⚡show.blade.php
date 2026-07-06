@@ -249,7 +249,7 @@ new class extends Component {
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <flux:button :href="route('library')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="self-start">
+    <flux:button :href="route('library')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
         {{ __('Libreria') }}
     </flux:button>
 
@@ -277,7 +277,7 @@ new class extends Component {
                 @endif
 
                 @if ($this->userShow)
-                    <flux:button wire:click="remove" variant="ghost" size="sm"
+                    <flux:button wire:click="remove" variant="outline" size="sm"
                         wire:confirm="{{ __('Rimuovere la serie dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
             </div>
@@ -306,7 +306,7 @@ new class extends Component {
                     <span class="ml-1 text-sm font-normal text-zinc-500">{{ $seen }}/{{ $episodes->count() }}</span>
                 </flux:heading>
                 @if ($seen < $episodes->count())
-                    <flux:button size="xs" variant="ghost" icon="check"
+                    <flux:button size="xs" variant="outline" icon="check"
                         wire:click="markSeason({{ $seasonNumber }})">{{ __('Segna stagione') }}</flux:button>
                 @endif
             </div>
@@ -314,7 +314,7 @@ new class extends Component {
             <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
                 @foreach ($episodes as $episode)
                     <div class="flex items-center gap-3 py-2">
-                        <flux:button size="xs" variant="{{ $episode->is_watched ? 'primary' : 'ghost' }}"
+                        <flux:button size="xs" variant="{{ $episode->is_watched ? 'primary' : 'outline' }}"
                             icon="check" wire:click="toggle({{ $episode->id }})"
                             aria-label="{{ __('Segna visto') }}" />
 
@@ -333,7 +333,7 @@ new class extends Component {
                         @endif
 
                         @unless ($episode->is_watched)
-                            <flux:button size="xs" variant="ghost" wire:click="markUpTo({{ $episode->id }})"
+                            <flux:button size="xs" variant="outline" wire:click="markUpTo({{ $episode->id }})"
                                 title="{{ __('Segna tutti fino a qui') }}">{{ __('fino a qui') }}</flux:button>
                         @endunless
                     </div>
@@ -349,6 +349,6 @@ new class extends Component {
     <form wire:submit="addEpisode" class="flex flex-wrap items-end gap-3">
         <flux:input wire:model="newSeason" type="number" min="0" :label="__('Stagione')" class="w-24" />
         <flux:input wire:model="newEpisode" type="number" min="0" :label="__('Episodio')" class="w-24" />
-        <flux:button type="submit" variant="ghost" icon="plus">{{ __('Aggiungi mancante') }}</flux:button>
+        <flux:button type="submit" variant="outline" icon="plus">{{ __('Aggiungi mancante') }}</flux:button>
     </form>
 </div>

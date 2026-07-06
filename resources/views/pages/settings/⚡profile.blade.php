@@ -174,7 +174,7 @@ new #[Title('Profilo')] class extends Component {
             </div>
 
             @unless ($editingName)
-                <flux:button variant="ghost" size="sm" icon="pencil-square"
+                <flux:button variant="outline" size="sm" icon="pencil-square"
                     wire:click="$set('editingName', true)" aria-label="{{ __('Modifica nome') }}" />
             @endunless
         </div>
@@ -254,7 +254,7 @@ new #[Title('Profilo')] class extends Component {
                         <flux:error name="newListName" />
                     </div>
                     <flux:button type="submit" variant="primary" icon="check" aria-label="{{ __('Crea') }}" />
-                    <flux:button type="button" variant="ghost" icon="x-mark"
+                    <flux:button type="button" variant="outline" icon="x-mark"
                         wire:click="$set('creatingList', false)" aria-label="{{ __('Annulla') }}" />
                 </form>
             @elseif ($this->lists->isEmpty())
@@ -262,7 +262,7 @@ new #[Title('Profilo')] class extends Component {
                     {{ __('Crea una lista') }}
                 </flux:button>
             @else
-                <flux:button variant="ghost" size="sm" icon="plus" class="self-start" wire:click="$set('creatingList', true)">
+                <flux:button variant="outline" size="sm" icon="plus" class="self-start" wire:click="$set('creatingList', true)">
                     {{ __('Nuova lista') }}
                 </flux:button>
             @endif

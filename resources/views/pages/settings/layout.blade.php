@@ -1,5 +1,5 @@
 <div class="flex w-full flex-col gap-2">
-    <flux:button :href="route('profile.edit')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="self-start">
+    <flux:button :href="route('profile.edit')" wire:navigate variant="outline" size="sm" icon="arrow-left" class="self-start">
         {{ __('Profilo') }}
     </flux:button>
 
