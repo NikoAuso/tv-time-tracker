@@ -122,6 +122,45 @@ class Tmdb
     }
 
     /**
+     * Piattaforme streaming (flatrate) per la regione e link JustWatch.
+     *
+     * @return array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}
+     */
+    public function movieProviders(int $tmdbId, string $region = 'IT'): array
+    {
+        $response = $this->client()->get("/movie/{$tmdbId}/watch/providers");
+        $data = $response->ok() ? ($response->json("results.{$region}") ?? []) : [];
+
+        return [
+            'link' => $data['link'] ?? null,
+            'flatrate' => array_map(fn (array $p): array => [
+                'name' => (string) $p['provider_name'],
+                'logo_path' => $p['logo_path'] ?? null,
+            ], $data['flatrate'] ?? []),
+        ];
+    }
+
+    /**
+     * URL YouTube del trailer del film, con fallback su lingua e tipo di video.
+     */
+    public function movieTrailer(int $tmdbId): ?string
+    {
+        foreach (['it-IT', 'en-US'] as $language) {
+            $response = $this->client()->get("/movie/{$tmdbId}/videos", ['language' => $language]);
+            $videos = collect((array) ($response->ok() ? ($response->json('results') ?? []) : []))
+                ->where('site', 'YouTube');
+
+            $trailer = $videos->firstWhere('type', 'Trailer') ?? $videos->first();
+
+            if ($trailer !== null) {
+                return 'https://www.youtube.com/watch?v='.$trailer['key'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Serie di tendenza della settimana.
      *
      * @return array<int, array<string, mixed>>

@@ -3,7 +3,9 @@
 use App\Models\Movie;
 use App\Models\UserList;
 use App\Models\UserMovie;
+use App\Services\Tmdb;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -23,6 +25,47 @@ new class extends Component {
             ->first();
     }
 
+    /**
+     * Piattaforme streaming (flatrate) e link JustWatch, da TMDB e in cache.
+     *
+     * @return array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}
+     */
+    #[Computed]
+    public function providers(): array
+    {
+        if (! $this->movie->tmdb_id) {
+            return ['link' => null, 'flatrate' => []];
+        }
+
+        return Cache::remember(
+            "movie:{$this->movie->tmdb_id}:providers",
+            now()->addHours(12),
+            fn (): array => rescue(
+                fn () => app(Tmdb::class)->movieProviders($this->movie->tmdb_id),
+                ['link' => null, 'flatrate' => []],
+                report: false,
+            ),
+        );
+    }
+
+    #[Computed]
+    public function trailer(): ?string
+    {
+        if (! $this->movie->tmdb_id) {
+            return null;
+        }
+
+        return Cache::remember(
+            "movie:{$this->movie->tmdb_id}:trailer",
+            now()->addDay(),
+            fn (): ?string => rescue(
+                fn () => app(Tmdb::class)->movieTrailer($this->movie->tmdb_id),
+                null,
+                report: false,
+            ),
+        );
+    }
+
     public function markWatched(): void
     {
         UserMovie::updateOrCreate(
@@ -31,6 +74,32 @@ new class extends Component {
         );
 
         unset($this->entry);
+    }
+
+    public function rewatch(): void
+    {
+        $entry = UserMovie::firstOrCreate(
+            ['user_id' => Auth::id(), 'movie_id' => $this->movie->id],
+            ['status' => 'watched'],
+        );
+        $entry->update([
+            'status' => 'watched',
+            'watched_at' => now(),
+            'rewatch_count' => $entry->rewatch_count + 1,
+        ]);
+
+        unset($this->entry);
+        $this->modal('visto-actions')->close();
+    }
+
+    public function unwatch(): void
+    {
+        UserMovie::where('user_id', Auth::id())
+            ->where('movie_id', $this->movie->id)
+            ->update(['status' => 'watchlist', 'watched_at' => null, 'rewatch_count' => 0]);
+
+        unset($this->entry);
+        $this->modal('visto-actions')->close();
     }
 
     public function addWatchlist(): void
@@ -118,9 +187,24 @@ new class extends Component {
                 @if ($movie->runtime) · {{ $movie->runtime }} {{ __('min') }} @endif
             </flux:text>
 
+            @if ($movie->genres)
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach ($movie->genres as $genre)
+                        <flux:badge size="sm" color="zinc">{{ $genre }}</flux:badge>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="mt-2 flex flex-wrap items-center gap-3">
                 @if ($this->entry?->status === 'watched')
-                    <flux:badge color="green" icon="check">{{ __('Visto') }}</flux:badge>
+                    <flux:modal.trigger name="visto-actions">
+                        <flux:button icon="check" variant="primary" color="green">
+                            {{ __('Visto') }}
+                            @if ($this->entry->rewatch_count > 0)
+                                <span class="ml-1 opacity-80">×{{ $this->entry->rewatch_count + 1 }}</span>
+                            @endif
+                        </flux:button>
+                    </flux:modal.trigger>
                     @if ($this->entry->watched_at)
                         <flux:text size="sm" class="text-zinc-500">
                             {{ __('il') }} {{ $this->entry->watched_at->format('d/m/Y') }}
@@ -162,4 +246,49 @@ new class extends Component {
         <flux:separator />
         <flux:text class="leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $movie->overview }}</flux:text>
     @endif
+
+    @if ($this->trailer || $this->providers['flatrate'])
+        <flux:separator />
+        <div class="flex flex-col gap-4">
+            @if ($this->trailer)
+                <flux:button :href="$this->trailer" target="_blank" icon="play" variant="outline" class="self-start">
+                    {{ __('Trailer') }}
+                </flux:button>
+            @endif
+
+            @if ($this->providers['flatrate'])
+                <div class="flex flex-col gap-2">
+                    <flux:text size="sm" class="text-zinc-500">{{ __('Dove guardarlo') }}</flux:text>
+                    <div class="flex flex-wrap items-center gap-2">
+                        @foreach ($this->providers['flatrate'] as $provider)
+                            <a @if ($this->providers['link']) href="{{ $this->providers['link'] }}" target="_blank" @endif
+                                title="{{ $provider['name'] }}" class="shrink-0">
+                                @if ($provider['logo_path'])
+                                    <img src="https://image.tmdb.org/t/p/w92{{ $provider['logo_path'] }}"
+                                        alt="{{ $provider['name'] }}" class="size-10 rounded-lg object-cover" />
+                                @else
+                                    <flux:badge color="zinc">{{ $provider['name'] }}</flux:badge>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </div>
+    @endif
+
+    <flux:modal name="visto-actions" class="max-w-sm">
+        <div class="flex flex-col gap-5">
+            <flux:heading size="lg">{{ __('Visto') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('Cosa vuoi fare con questo film?') }}</flux:text>
+            <div class="flex flex-col gap-2">
+                <flux:button wire:click="rewatch" icon="arrow-path" variant="primary">
+                    {{ __('Visto di nuovo') }}
+                </flux:button>
+                <flux:button wire:click="unwatch" icon="x-mark" variant="danger">
+                    {{ __('Rimuovi visto') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
