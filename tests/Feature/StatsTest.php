@@ -34,6 +34,9 @@ it('renders stats for the current user only', function () {
         ->assertOk()
         ->assertSee('Statistiche')
         ->assertSee('House')
+        ->assertSee('Da iniziare')
+        ->assertSee('In corso')
+        ->assertSee('Concluse')
         ->assertSee('Generi')
         ->assertSee('Dramma')
         ->assertDontSee('SecretShow');

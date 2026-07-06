@@ -2,6 +2,7 @@
 
 use App\Models\UserMovie;
 use App\Models\UserShow;
+use App\Services\SeriesProgress;
 use App\Services\WatchTime;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -21,10 +22,33 @@ new #[Title('Statistiche')] class extends Component {
         return DB::table('watched_episodes')->where('user_id', Auth::id())->count();
     }
 
+    /**
+     * Serie in libreria "iniziate" (>=1 episodio visto).
+     */
     #[Computed]
-    public function seriesFollowed(): int
+    public function seriesStarted(): int
     {
-        return DB::table('user_shows')->where('user_id', Auth::id())->where('status', 'following')->count();
+        return DB::table('user_shows')->where('user_id', Auth::id())
+            ->whereIn('show_id', SeriesProgress::startedShowIds((int) Auth::id()))->count();
+    }
+
+    #[Computed]
+    public function seriesConcluded(): int
+    {
+        return DB::table('user_shows')->where('user_id', Auth::id())
+            ->whereIn('show_id', SeriesProgress::concludedShowIds((int) Auth::id()))->count();
+    }
+
+    #[Computed]
+    public function seriesInProgress(): int
+    {
+        return max(0, $this->seriesStarted - $this->seriesConcluded);
+    }
+
+    #[Computed]
+    public function seriesNotStarted(): int
+    {
+        return max(0, DB::table('user_shows')->where('user_id', Auth::id())->count() - $this->seriesStarted);
     }
 
     /**
@@ -43,12 +67,6 @@ new #[Title('Statistiche')] class extends Component {
     public function seriesFavorites(): int
     {
         return DB::table('user_shows')->where('user_id', Auth::id())->where('is_favorite', true)->count();
-    }
-
-    #[Computed]
-    public function seriesWatchlist(): int
-    {
-        return DB::table('user_shows')->where('user_id', Auth::id())->where('status', 'watchlist')->count();
     }
 
     #[Computed]
@@ -243,10 +261,10 @@ new #[Title('Statistiche')] class extends Component {
             @include('partials.stat-time-card', ['parts' => $this->seriesTimeParts])
             @foreach ([
                 ['Episodi visti', $it($this->episodesWatched)],
-                ['Serie seguite', $it($this->seriesFollowed)],
-                ['Da vedere', $it($this->seriesWatchlist)],
+                ['Da iniziare', $it($this->seriesNotStarted)],
+                ['In corso', $it($this->seriesInProgress)],
+                ['Concluse', $it($this->seriesConcluded)],
                 ['Preferite', $it($this->seriesFavorites)],
-                ['Media ep/serie', $it($this->seriesFollowed > 0 ? (int) round($this->episodesWatched / $this->seriesFollowed) : 0)],
                 ['Voto medio', $rate($this->seriesAvgRating)],
             ] as [$label, $value])
                 <div class="flex flex-col gap-1 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">

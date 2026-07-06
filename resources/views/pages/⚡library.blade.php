@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Episode;
 use App\Models\UserMovie;
 use App\Models\UserShow;
+use App\Services\SeriesProgress;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,40 +27,21 @@ new #[Title('Libreria')] class extends Component
     }
 
     /**
-     * Serie "iniziate": con almeno un episodio visto. Lo stato di libreria
-     * (following/watchlist/archived) non conta: a decidere è il numero di visti.
-     *
      * @return Collection<int, int>
      */
     #[Computed]
     public function startedShowIds()
     {
-        return DB::table('watched_episodes')
-            ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
-            ->where('watched_episodes.user_id', Auth::id())
-            ->distinct()->pluck('episodes.show_id');
+        return SeriesProgress::startedShowIds((int) Auth::id());
     }
 
     /**
-     * Serie "concluse": iniziate e senza episodi già usciti ancora da vedere.
-     * Stesso criterio di episodio in sospeso della dashboard "Da guardare".
-     *
      * @return Collection<int, int>
      */
     #[Computed]
     public function concludedShowIds()
     {
-        $userId = Auth::id();
-        $started = $this->startedShowIds;
-
-        $withUnwatched = Episode::query()
-            ->whereIn('show_id', $started)
-            ->where('season_number', '>=', 1)
-            ->whereDoesntHave('watches', fn ($q) => $q->where('user_id', $userId))
-            ->where(fn ($q) => $q->whereNull('air_date')->orWhereDate('air_date', '<=', now()))
-            ->distinct()->pluck('show_id');
-
-        return $started->diff($withUnwatched)->values();
+        return SeriesProgress::concludedShowIds((int) Auth::id());
     }
 
     /**
