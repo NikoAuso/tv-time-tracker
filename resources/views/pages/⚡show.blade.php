@@ -29,6 +29,25 @@ new class extends Component {
             ->first();
     }
 
+    public function addWatchlist(): void
+    {
+        UserShow::updateOrCreate(
+            ['user_id' => Auth::id(), 'show_id' => $this->show->id],
+            ['status' => 'watchlist'],
+        );
+
+        unset($this->userShow);
+    }
+
+    public function remove(): void
+    {
+        UserShow::where('user_id', Auth::id())
+            ->where('show_id', $this->show->id)
+            ->delete();
+
+        unset($this->userShow);
+    }
+
     public function rate(int $stars): void
     {
         UserShow::updateOrCreate(
@@ -127,6 +146,7 @@ new class extends Component {
                 'episode_id' => $episodeId,
                 'watched_at' => now(),
             ]);
+            $this->ensureFollowing();
         }
 
         $this->refreshLists();
@@ -174,6 +194,7 @@ new class extends Component {
 
         if ($rows !== []) {
             WatchedEpisode::insert($rows);
+            $this->ensureFollowing();
         }
 
         $this->refreshLists();
@@ -197,8 +218,24 @@ new class extends Component {
             ['watched_at' => now()],
         );
 
+        $this->ensureFollowing();
         $this->reset('newSeason', 'newEpisode');
         $this->refreshLists();
+    }
+
+    /**
+     * Segnare un episodio come visto porta la serie in libreria come "In corso":
+     * una serie "Da vedere" (watchlist) ha per definizione 0 episodi visti.
+     */
+    private function ensureFollowing(): void
+    {
+        $entry = UserShow::firstOrCreate(['user_id' => Auth::id(), 'show_id' => $this->show->id]);
+
+        if ($entry->status === 'watchlist') {
+            $entry->update(['status' => 'following']);
+        }
+
+        unset($this->userShow);
     }
 
     private function refreshLists(): void
@@ -226,6 +263,21 @@ new class extends Component {
                 <div class="h-full rounded-full bg-accent"
                     style="width: {{ $this->totalCount ? round($this->watchedCount / $this->totalCount * 100) : 0 }}%"></div>
             </div>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+                @if ($this->watchedCount === 0 && $this->userShow?->status !== 'watchlist')
+                    <flux:button wire:click="addWatchlist" icon="bookmark" variant="outline">
+                        {{ __('Segna da vedere') }}
+                    </flux:button>
+                @elseif ($this->userShow?->status === 'watchlist')
+                    <flux:badge color="zinc" icon="bookmark">{{ __('Da vedere') }}</flux:badge>
+                @endif
+
+                @if ($this->userShow)
+                    <flux:button wire:click="remove" variant="ghost" size="sm"
+                        wire:confirm="{{ __('Rimuovere la serie dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
+                @endif
+            </div>
+
             <div class="mt-1 flex flex-wrap items-center gap-4">
                 <button type="button" wire:click="toggleFavorite" class="shrink-0" aria-label="{{ __('Preferito') }}">
                     <flux:icon.heart class="size-6 {{ $this->userShow?->is_favorite ? 'fill-current text-red-500' : 'text-zinc-400' }}" />

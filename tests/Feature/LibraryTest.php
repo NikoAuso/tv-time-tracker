@@ -143,3 +143,40 @@ it('adds a watched episode manually', function () {
     expect($episode)->not->toBeNull();
     expect(WatchedEpisode::where('user_id', $user->id)->where('episode_id', $episode->id)->exists())->toBeTrue();
 });
+
+it('marks a series as "da vedere" from its detail page', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('addWatchlist')
+        ->assertOk();
+
+    expect(UserShow::where('user_id', $user->id)->where('show_id', $show->id)->value('status'))
+        ->toBe('watchlist');
+});
+
+it('promotes a "da vedere" series to following when an episode is watched', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+    UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id, 'status' => 'watchlist']);
+    $episode = Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1]);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('toggle', $episode->id);
+
+    expect(UserShow::where('user_id', $user->id)->where('show_id', $show->id)->value('status'))
+        ->toBe('following');
+});
+
+it('removes a series from the library', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create();
+    UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id, 'status' => 'watchlist']);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('remove')
+        ->assertOk();
+
+    expect(UserShow::where('user_id', $user->id)->where('show_id', $show->id)->exists())->toBeFalse();
+});
