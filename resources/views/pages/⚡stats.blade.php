@@ -109,39 +109,6 @@ new #[Title('Statistiche')] class extends Component {
     }
 
     /**
-     * @return array{record: int, record_day: string|null, active_days: int, avg_per_day: int}
-     */
-    #[Computed]
-    public function seriesMarathon(): array
-    {
-        return $this->marathonStats(
-            DB::table('watched_episodes')
-                ->where('user_id', Auth::id())
-                ->whereNotNull('watched_at')
-                ->selectRaw('date(watched_at) as day, count(*) as c')
-                ->groupBy('day')->pluck('c', 'day'),
-        );
-    }
-
-    /**
-     * Statistiche "maratone" da un conteggio per giorno (giorno => quantità).
-     *
-     * @param  \Illuminate\Support\Collection<int|string, mixed>  $byDay
-     * @return array{record: int, record_day: string|null, active_days: int, avg_per_day: int}
-     */
-    private function marathonStats($byDay): array
-    {
-        $activeDays = $byDay->count();
-
-        return [
-            'record' => $activeDays > 0 ? (int) $byDay->max() : 0,
-            'record_day' => $activeDays > 0 ? (string) $byDay->sortDesc()->keys()->first() : null,
-            'active_days' => $activeDays,
-            'avg_per_day' => $activeDays > 0 ? intdiv((int) $byDay->sum(), $activeDays) : 0,
-        ];
-    }
-
-    /**
      * Generi più presenti fra le serie in libreria (una serie ha più generi).
      *
      * @return array<string, int>
@@ -226,22 +193,6 @@ new #[Title('Statistiche')] class extends Component {
     }
 
     /**
-     * @return array{record: int, record_day: string|null, active_days: int, avg_per_day: int}
-     */
-    #[Computed]
-    public function moviesMarathon(): array
-    {
-        return $this->marathonStats(
-            DB::table('user_movies')
-                ->where('user_id', Auth::id())
-                ->where('status', 'watched')
-                ->whereNotNull('watched_at')
-                ->selectRaw('date(watched_at) as day, count(*) as c')
-                ->groupBy('day')->pluck('c', 'day'),
-        );
-    }
-
-    /**
      * Generi più presenti fra i film visti.
      *
      * @return array<string, int>
@@ -295,8 +246,6 @@ new #[Title('Statistiche')] class extends Component {
                 </div>
             @endforeach
         </div>
-
-        @include('partials.marathon', ['stats' => $this->seriesMarathon, 'unit' => __('episodi')])
 
         <div class="flex flex-col gap-3">
             <flux:heading size="lg">{{ __('Episodi registrati per mese') }}</flux:heading>
@@ -354,8 +303,6 @@ new #[Title('Statistiche')] class extends Component {
                 </div>
             @endforeach
         </div>
-
-        @include('partials.marathon', ['stats' => $this->moviesMarathon, 'unit' => __('film')])
 
         <div class="flex flex-col gap-3">
             <flux:heading size="lg">{{ __('Film visti per decennio') }}</flux:heading>
