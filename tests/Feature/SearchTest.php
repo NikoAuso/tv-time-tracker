@@ -121,6 +121,51 @@ it('adds a trending movie regardless of the active type', function () {
         ->toBeTrue();
 });
 
+it('opens a series from search, downloading it to the catalog without adding it to the library', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/trending/*' => Http::response(['results' => []]),
+        'https://api.themoviedb.org/3/tv/500/season/*' => Http::response(['episodes' => [['id' => 1, 'episode_number' => 1]]]),
+        'https://api.themoviedb.org/3/tv/500*' => Http::response(['id' => 500, 'name' => 'New Show', 'seasons' => [['season_number' => 1]]]),
+    ]);
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->call('open', 500, 'series')
+        ->assertRedirect();
+
+    expect(Show::where('tmdb_id', 500)->exists())->toBeTrue()
+        ->and(UserShow::where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('opens a movie from search into the catalog', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/trending/*' => Http::response(['results' => []]),
+        'https://api.themoviedb.org/3/movie/600*' => Http::response(['id' => 600, 'title' => 'New Movie']),
+    ]);
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->call('open', 600, 'movies')
+        ->assertRedirect();
+
+    expect(Movie::where('tmdb_id', 600)->exists())->toBeTrue()
+        ->and(UserMovie::where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('opens an already-local show without a TMDB token', function () {
+    config(['services.tmdb.token' => null]);
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['tmdb_id' => 700]);
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->call('open', 700, 'series')
+        ->assertRedirect(route('shows.show', $show));
+});
+
 it('marks results already in the library', function () {
     config(['services.tmdb.token' => 'fake-token']);
     Http::fake([

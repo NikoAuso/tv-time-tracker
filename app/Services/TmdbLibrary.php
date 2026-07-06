@@ -18,7 +18,7 @@ class TmdbLibrary
 {
     public function __construct(private readonly Tmdb $tmdb) {}
 
-    public function addShow(int $tmdbId, int $userId): ?Show
+    public function addShow(int $tmdbId, ?int $userId = null): ?Show
     {
         $data = $this->tmdb->getShow($tmdbId);
         if ($data === null) {
@@ -67,12 +67,14 @@ class TmdbLibrary
             }
         }
 
-        UserShow::firstOrCreate(['user_id' => $userId, 'show_id' => $show->id], ['status' => 'watchlist']);
+        if ($userId !== null) {
+            UserShow::firstOrCreate(['user_id' => $userId, 'show_id' => $show->id], ['status' => 'watchlist']);
+        }
 
         return $show;
     }
 
-    public function addMovie(int $tmdbId, int $userId): ?Movie
+    public function addMovie(int $tmdbId, ?int $userId = null): ?Movie
     {
         $data = $this->tmdb->getMovie($tmdbId);
         if ($data === null) {
@@ -91,7 +93,9 @@ class TmdbLibrary
             ],
         );
 
-        UserMovie::firstOrCreate(['user_id' => $userId, 'movie_id' => $movie->id], ['status' => 'watchlist']);
+        if ($userId !== null) {
+            UserMovie::firstOrCreate(['user_id' => $userId, 'movie_id' => $movie->id], ['status' => 'watchlist']);
+        }
 
         return $movie;
     }

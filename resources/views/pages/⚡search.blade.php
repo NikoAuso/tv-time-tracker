@@ -116,6 +116,25 @@ new #[Title('Cerca')] class extends Component {
         return $local->filter(fn (int $id) => in_array($id, $owned, true));
     }
 
+    /**
+     * Apre la scheda del titolo: se non è ancora nel catalogo locale lo scarica
+     * da TMDB (solo catalogo, non lo aggiunge alla libreria dell'utente).
+     */
+    public function open(int $tmdbId, string $type)
+    {
+        if ($type === 'movies') {
+            $movie = Movie::where('tmdb_id', $tmdbId)->first()
+                ?? ($this->hasToken() ? (new TmdbLibrary(new Tmdb($this->token())))->addMovie($tmdbId) : null);
+
+            return $movie ? $this->redirect(route('movies.show', $movie), navigate: true) : null;
+        }
+
+        $show = Show::where('tmdb_id', $tmdbId)->first()
+            ?? ($this->hasToken() ? (new TmdbLibrary(new Tmdb($this->token())))->addShow($tmdbId) : null);
+
+        return $show ? $this->redirect(route('shows.show', $show), navigate: true) : null;
+    }
+
     public function add(int $tmdbId, ?string $type = null): void
     {
         if (! $this->hasToken()) {
@@ -182,15 +201,22 @@ new #[Title('Cerca')] class extends Component {
                 <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                     @foreach ($results as $item)
                         <div class="flex items-center gap-3 py-3">
-                            <div class="h-[84px] w-14 shrink-0">
-                                @include('partials.poster', ['poster' => $item['poster'], 'title' => $item['title'], 'ratio' => 'h-full w-full', 'size' => 'w185'])
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <flux:heading size="sm" class="truncate">{{ $item['title'] }}</flux:heading>
-                                <flux:text size="sm" class="text-zinc-500">
-                                    {{ $item['year'] }}{{ $item['year'] ? ' · ' : '' }}{{ $type === 'movies' ? __('Film') : __('Serie') }}
-                                </flux:text>
-                            </div>
+                            <button type="button" wire:click="open({{ $item['tmdb_id'] }}, '{{ $type }}')"
+                                class="flex min-w-0 flex-1 items-center gap-3 text-start">
+                                <div class="relative h-[84px] w-14 shrink-0">
+                                    @include('partials.poster', ['poster' => $item['poster'], 'title' => $item['title'], 'ratio' => 'h-full w-full', 'size' => 'w185'])
+                                    <div wire:loading wire:target="open({{ $item['tmdb_id'] }}, '{{ $type }}')"
+                                        class="absolute inset-0 flex items-center justify-center rounded bg-black/50">
+                                        <flux:icon.arrow-path class="size-4 animate-spin text-white" />
+                                    </div>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <flux:heading size="sm" class="truncate">{{ $item['title'] }}</flux:heading>
+                                    <flux:text size="sm" class="text-zinc-500">
+                                        {{ $item['year'] }}{{ $item['year'] ? ' · ' : '' }}{{ $type === 'movies' ? __('Film') : __('Serie') }}
+                                    </flux:text>
+                                </div>
+                            </button>
                             @if ($item['href'])
                                 <flux:button :href="$item['href']" wire:navigate size="sm" variant="outline" icon="check">
                                     {{ __('In libreria') }}
