@@ -34,6 +34,8 @@ it('renders stats for the current user only', function () {
         ->assertOk()
         ->assertSee('Statistiche')
         ->assertSee('House')
+        ->assertSee('Maratone')
+        ->assertSee('Giornata record')
         ->assertDontSee('SecretShow');
 });
 
@@ -45,6 +47,7 @@ it('shows movie stats on the film tab', function () {
     Livewire::actingAs($user)->test('pages::stats')
         ->set('tab', 'movies')
         ->assertSee('Durata media')
+        ->assertSee('Maratone')
         ->assertSee('Film visti per decennio')
         ->assertSee('Anni 2010');
 });
