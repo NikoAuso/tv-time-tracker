@@ -66,6 +66,24 @@ new class extends Component {
         );
     }
 
+    #[Computed]
+    public function backdrop(): ?string
+    {
+        if (! $this->movie->tmdb_id) {
+            return null;
+        }
+
+        return Cache::remember(
+            "movie:{$this->movie->tmdb_id}:backdrop",
+            now()->addWeek(),
+            fn (): ?string => rescue(
+                fn () => data_get(app(Tmdb::class)->getMovie($this->movie->tmdb_id), 'backdrop_path'),
+                null,
+                report: false,
+            ),
+        );
+    }
+
     public function markWatched(): void
     {
         UserMovie::updateOrCreate(
@@ -175,67 +193,75 @@ new class extends Component {
 <div class="flex max-w-2xl flex-col gap-6">
     <x-back-button />
 
-    <div class="flex gap-4">
-        @if ($movie->poster_path)
-            <img src="https://image.tmdb.org/t/p/w342{{ $movie->poster_path }}" alt="{{ $movie->title }}"
-                class="h-48 w-32 shrink-0 rounded-xl object-cover" />
+    <div class="relative overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
+        @if ($this->backdrop)
+            <img src="https://image.tmdb.org/t/p/w780{{ $this->backdrop }}" alt="" aria-hidden="true"
+                class="absolute inset-0 h-full w-full object-cover object-top" />
+            <div class="absolute inset-0 bg-gradient-to-t from-zinc-100 via-zinc-100/85 to-zinc-100/30 dark:from-zinc-800 dark:via-zinc-800/85 dark:to-zinc-800/30"></div>
         @endif
-        <div class="flex flex-1 flex-col gap-2">
-            <flux:heading size="xl">{{ $movie->title }}</flux:heading>
-            <flux:text class="tabular-nums text-zinc-500">
-                @if ($movie->release_date) {{ $movie->release_date->year }} @endif
-                @if ($movie->runtime) · {{ $movie->runtime }} {{ __('min') }} @endif
-            </flux:text>
 
-            @if ($movie->genres)
-                <div class="flex flex-wrap gap-1.5">
-                    @foreach ($movie->genres as $genre)
-                        <flux:badge size="sm" color="zinc">{{ $genre }}</flux:badge>
-                    @endforeach
-                </div>
+        <div class="relative flex items-end gap-4 p-4 pt-24 sm:pt-28">
+            @if ($movie->poster_path)
+                <img src="https://image.tmdb.org/t/p/w342{{ $movie->poster_path }}" alt="{{ $movie->title }}"
+                    class="h-44 w-28 shrink-0 rounded-xl object-cover shadow-lg ring-1 ring-black/10 dark:ring-white/10" />
             @endif
+            <div class="flex flex-1 flex-col gap-2">
+                <flux:heading size="xl">{{ $movie->title }}</flux:heading>
+                <flux:text class="tabular-nums text-zinc-600 dark:text-zinc-300">
+                    @if ($movie->release_date) {{ $movie->release_date->year }} @endif
+                    @if ($movie->runtime) · {{ $movie->runtime }} {{ __('min') }} @endif
+                </flux:text>
 
-            <div class="mt-2 flex flex-wrap items-center gap-3">
-                @if ($this->entry?->status === 'watched')
-                    <flux:modal.trigger name="visto-actions">
-                        <flux:button icon="check" variant="primary" color="green">
-                            {{ __('Visto') }}
-                            @if ($this->entry->rewatch_count > 0)
-                                <span class="ml-1 opacity-80">×{{ $this->entry->rewatch_count + 1 }}</span>
-                            @endif
-                        </flux:button>
-                    </flux:modal.trigger>
-                    @if ($this->entry->watched_at)
-                        <flux:text size="sm" class="text-zinc-500">
-                            {{ __('il') }} {{ $this->entry->watched_at->format('d/m/Y') }}
-                        </flux:text>
-                    @endif
-                @else
-                    <flux:button wire:click="markWatched" icon="check" variant="primary">
-                        {{ __('Segna visto') }}
-                    </flux:button>
+                @if ($movie->genres)
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach ($movie->genres as $genre)
+                            <flux:badge size="sm" color="zinc">{{ $genre }}</flux:badge>
+                        @endforeach
+                    </div>
                 @endif
-
-                @unless ($this->entry)
-                    <flux:button wire:click="addWatchlist" icon="bookmark" variant="outline">
-                        {{ __('Da guardare') }}
-                    </flux:button>
-                @endunless
-
-                @if ($this->entry)
-                    <flux:button wire:click="remove" variant="danger" size="sm" icon="trash"
-                        wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
-                @endif
-            </div>
-
-            <div class="mt-1 flex flex-wrap items-center gap-4">
-                <button type="button" wire:click="toggleFavorite" class="shrink-0" aria-label="{{ __('Preferito') }}">
-                    <flux:icon.heart class="size-6 {{ $this->entry?->is_favorite ? 'fill-current text-red-500' : 'text-zinc-400' }}" />
-                </button>
-                @include('partials.star-rating', ['rating' => $this->entry?->rating])
-                @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
             </div>
         </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+        @if ($this->entry?->status === 'watched')
+            <flux:modal.trigger name="visto-actions">
+                <flux:button icon="check" variant="primary" color="green">
+                    {{ __('Visto') }}
+                    @if ($this->entry->rewatch_count > 0)
+                        <span class="ml-1 opacity-80">×{{ $this->entry->rewatch_count + 1 }}</span>
+                    @endif
+                </flux:button>
+            </flux:modal.trigger>
+            @if ($this->entry->watched_at)
+                <flux:text size="sm" class="text-zinc-500">
+                    {{ __('il') }} {{ $this->entry->watched_at->format('d/m/Y') }}
+                </flux:text>
+            @endif
+        @else
+            <flux:button wire:click="markWatched" icon="check" variant="primary">
+                {{ __('Segna visto') }}
+            </flux:button>
+        @endif
+
+        @unless ($this->entry)
+            <flux:button wire:click="addWatchlist" icon="bookmark" variant="outline">
+                {{ __('Da guardare') }}
+            </flux:button>
+        @endunless
+
+        @if ($this->entry)
+            <flux:button wire:click="remove" variant="danger" size="sm" icon="trash"
+                wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
+        @endif
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+        <button type="button" wire:click="toggleFavorite" class="shrink-0" aria-label="{{ __('Preferito') }}">
+            <flux:icon.heart class="size-6 {{ $this->entry?->is_favorite ? 'fill-current text-red-500' : 'text-zinc-400' }}" />
+        </button>
+        @include('partials.star-rating', ['rating' => $this->entry?->rating])
+        @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
     </div>
 
     @if ($this->entry?->status === 'watchlist')
