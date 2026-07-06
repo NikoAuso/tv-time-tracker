@@ -66,6 +66,10 @@ select:focus[data-flux-control] {
     background-color: rgba(0, 0, 0, 0.4);
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

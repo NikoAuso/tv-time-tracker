@@ -38,12 +38,16 @@
 
             <flux:spacer />
 
-            @if (auth()->user()->hasPin())
-                <form method="POST" action="{{ route('lock') }}">
-                    @csrf
-                    <flux:button type="submit" variant="ghost" size="sm" icon="lock-closed" aria-label="{{ __('Blocca') }}" />
-                </form>
-            @endif
+            <div class="flex items-center gap-1">
+                <x-appearance-toggle />
+
+                @if (auth()->user()->hasPin())
+                    <form method="POST" action="{{ route('lock') }}">
+                        @csrf
+                        <flux:button type="submit" variant="ghost" size="sm" icon="lock-closed" aria-label="{{ __('Blocca') }}" />
+                    </form>
+                @endif
+            </div>
         </flux:header>
 
         {{ $slot }}
