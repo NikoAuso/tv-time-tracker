@@ -184,7 +184,10 @@ new class extends Component {
             <flux:heading size="xl">{{ $movie->title }}</flux:heading>
             <flux:text class="tabular-nums text-zinc-600 dark:text-zinc-300">
                 @if ($movie->release_date) {{ $movie->release_date->year }} @endif
-                @if ($movie->runtime) · {{ $movie->runtime }} {{ __('min') }} @endif
+                @if ($movie->runtime)
+                    @php $h = intdiv($movie->runtime, 60); $m = $movie->runtime % 60; @endphp
+                    · {{ $h ? $h.'h'.($m ? ' '.$m.'min' : '') : $m.'min' }}
+                @endif
             </flux:text>
 
             @if ($movie->genres)
@@ -225,8 +228,8 @@ new class extends Component {
         @endunless
 
         @if ($this->entry)
-            <flux:button wire:click="remove" variant="danger" size="sm" icon="trash"
-                wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
+            <flux:button wire:click="remove" variant="danger" size="sm" icon="x-mark"
+                wire:confirm="{{ __('Smettere di seguire questo film?') }}">{{ __('Smetti di seguire') }}</flux:button>
         @endif
     </div>
 
@@ -238,13 +241,12 @@ new class extends Component {
         @include('partials.add-to-list', ['lists' => $this->userLists, 'activeIds' => $this->listIds])
     </div>
 
-    @if ($this->entry?->status === 'watchlist')
-        <flux:text size="sm" class="text-zinc-500">{{ __('Da vedere') }}</flux:text>
-    @endif
-
     @if ($movie->overview)
         <flux:separator />
-        <flux:text class="leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $movie->overview }}</flux:text>
+        <div class="flex flex-col gap-2">
+            <flux:heading size="lg">{{ __('Trama') }}</flux:heading>
+            <flux:text class="leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $movie->overview }}</flux:text>
+        </div>
     @endif
 
     @if ($this->trailer || $this->providers['flatrate'])
