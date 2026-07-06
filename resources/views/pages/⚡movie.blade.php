@@ -141,7 +141,7 @@ new class extends Component {
                 @endunless
 
                 @if ($this->entry)
-                    <flux:button wire:click="remove" variant="outline" size="sm"
+                    <flux:button wire:click="remove" variant="danger" size="sm"
                         wire:confirm="{{ __('Rimuovere il film dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
             </div>

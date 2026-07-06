@@ -70,7 +70,7 @@ new #[Title('Liste')] class extends Component {
                             {{ $list->shows_count + $list->movies_count }} {{ __('elementi') }}
                         </flux:text>
                     </flux:link>
-                    <flux:button size="xs" variant="outline" icon="trash" wire:click="delete({{ $list->id }})"
+                    <flux:button size="xs" variant="danger" icon="trash" wire:click="delete({{ $list->id }})"
                         wire:confirm="{{ __('Eliminare la lista :name?', ['name' => $list->name]) }}"
                         aria-label="{{ __('Elimina') }}" />
                 </div>

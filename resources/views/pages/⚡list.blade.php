@@ -70,7 +70,7 @@ new class extends Component {
 
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="truncate">{{ $userList->name }}</flux:heading>
-        <flux:button variant="outline" size="sm" icon="trash" class="shrink-0"
+        <flux:button variant="danger" size="sm" icon="trash" class="shrink-0"
             wire:click="delete"
             wire:confirm="{{ __('Eliminare la lista «:name»?', ['name' => $userList->name]) }}"
             aria-label="{{ __('Elimina lista') }}" />

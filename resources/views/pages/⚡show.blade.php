@@ -277,7 +277,7 @@ new class extends Component {
                 @endif
 
                 @if ($this->userShow)
-                    <flux:button wire:click="remove" variant="outline" size="sm"
+                    <flux:button wire:click="remove" variant="danger" size="sm"
                         wire:confirm="{{ __('Rimuovere la serie dalla libreria?') }}">{{ __('Rimuovi') }}</flux:button>
                 @endif
             </div>
@@ -315,6 +315,7 @@ new class extends Component {
                 @foreach ($episodes as $episode)
                     <div class="flex items-center gap-3 py-2">
                         <flux:button size="xs" variant="{{ $episode->is_watched ? 'primary' : 'outline' }}"
+                            :color="$episode->is_watched ? 'green' : null"
                             icon="check" wire:click="toggle({{ $episode->id }})"
                             aria-label="{{ __('Segna visto') }}" />
 
