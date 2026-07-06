@@ -14,7 +14,7 @@ new #[Title('Libreria')] class extends Component
 {
     public string $search = '';
 
-    public string $type = 'all';
+    public string $type = 'series';
 
     public string $status = 'in_progress';
 
@@ -176,15 +176,14 @@ new #[Title('Libreria')] class extends Component
 
     @php
         $statusOptions = match ($type) {
-            'series' => ['watchlist' => 'Da iniziare', 'in_progress' => 'In corso', 'done' => 'Concluse'],
             'movies' => ['watchlist' => 'Da vedere', 'done' => 'Visti'],
-            default => ['watchlist' => 'Da vedere', 'in_progress' => 'In corso', 'done' => 'Concluse / Viste'],
+            default => ['watchlist' => 'Da iniziare', 'in_progress' => 'In corso', 'done' => 'Concluse'],
         };
     @endphp
 
     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div class="flex gap-2">
-            @foreach (['all' => 'Tutti', 'series' => 'Serie', 'movies' => 'Film'] as $key => $label)
+            @foreach (['series' => 'Serie', 'movies' => 'Film'] as $key => $label)
                 <flux:button size="sm" wire:click="$set('type', '{{ $key }}')"
                     :variant="$type === $key ? 'primary' : 'ghost'">{{ __($label) }}</flux:button>
             @endforeach

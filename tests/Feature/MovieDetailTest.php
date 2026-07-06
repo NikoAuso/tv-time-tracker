@@ -66,6 +66,7 @@ it('links to the movie detail page from the library', function () {
     UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $movie->id, 'status' => 'watched']);
 
     Livewire::actingAs($user)->test('pages::library')
+        ->set('type', 'movies')
         ->set('status', 'done')
         ->assertSee(route('movies.show', $movie), false);
 });

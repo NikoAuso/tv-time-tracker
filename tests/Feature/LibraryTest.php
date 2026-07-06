@@ -22,7 +22,7 @@ it('shows the followed shows in the library', function () {
         ->assertSee('House');
 });
 
-it('shows series and movies together, filterable by type', function () {
+it('filters the library by type', function () {
     $user = User::factory()->create();
     $show = Show::factory()->create(['name' => 'House']);
     UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id, 'status' => 'following']);
@@ -31,16 +31,14 @@ it('shows series and movies together, filterable by type', function () {
     $movie = Movie::factory()->create(['title' => 'Fury']);
     UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $movie->id, 'status' => 'watched']);
 
+    // Default: Serie, stato "Concluse".
     Livewire::actingAs($user)->test('pages::library')
         ->set('status', 'done')
         ->assertSee('House')
-        ->assertSee('Fury')
+        ->assertDontSee('Fury')
         ->set('type', 'movies')
         ->assertSee('Fury')
-        ->assertDontSee('House')
-        ->set('type', 'series')
-        ->assertSee('House')
-        ->assertDontSee('Fury');
+        ->assertDontSee('House');
 });
 
 it('separates watched movies from the watchlist', function () {
