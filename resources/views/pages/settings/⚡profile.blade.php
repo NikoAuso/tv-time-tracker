@@ -3,6 +3,7 @@
 use App\Models\UserList;
 use App\Models\UserMovie;
 use App\Models\UserShow;
+use App\Services\WatchTime;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -60,7 +61,7 @@ new #[Title('Profilo')] class extends Component {
     #[Computed]
     public function seriesParts(): array
     {
-        return $this->humanParts((int) DB::table('watched_episodes')
+        return WatchTime::humanParts((int) DB::table('watched_episodes')
             ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
             ->where('watched_episodes.user_id', Auth::id())
             ->sum('episodes.runtime'));
@@ -72,37 +73,11 @@ new #[Title('Profilo')] class extends Component {
     #[Computed]
     public function movieParts(): array
     {
-        return $this->humanParts((int) DB::table('user_movies')
+        return WatchTime::humanParts((int) DB::table('user_movies')
             ->join('movies', 'movies.id', '=', 'user_movies.movie_id')
             ->where('user_movies.user_id', Auth::id())
             ->where('user_movies.status', 'watched')
             ->sum('movies.runtime'));
-    }
-
-    /**
-     * Minuti scomposti in mesi/giorni/ore (mese = 30 giorni).
-     *
-     * @return list<array{value: int, unit: string}>
-     */
-    private function humanParts(int $minutes): array
-    {
-        $hours = intdiv($minutes, 60);
-        $months = intdiv($hours, 720);
-        $days = intdiv($hours % 720, 24);
-        $h = $hours % 24;
-
-        $parts = [];
-        if ($months > 0) {
-            $parts[] = ['value' => $months, 'unit' => $months === 1 ? __('mese') : __('mesi')];
-        }
-        if ($days > 0) {
-            $parts[] = ['value' => $days, 'unit' => $days === 1 ? __('giorno') : __('giorni')];
-        }
-        if ($h > 0 || $parts === []) {
-            $parts[] = ['value' => $h, 'unit' => $h === 1 ? __('ora') : __('ore')];
-        }
-
-        return $parts;
     }
 
     /**

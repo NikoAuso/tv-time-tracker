@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\WatchTime;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -24,13 +25,16 @@ new #[Title('Statistiche')] class extends Component {
         return DB::table('user_shows')->where('user_id', Auth::id())->where('status', 'following')->count();
     }
 
+    /**
+     * @return list<array{value: int, unit: string}>
+     */
     #[Computed]
-    public function seriesHours(): int
+    public function seriesTimeParts(): array
     {
-        return intdiv((int) DB::table('watched_episodes')
+        return WatchTime::humanParts((int) DB::table('watched_episodes')
             ->join('episodes', 'episodes.id', '=', 'watched_episodes.episode_id')
             ->where('watched_episodes.user_id', Auth::id())
-            ->sum('episodes.runtime'), 60);
+            ->sum('episodes.runtime'));
     }
 
     #[Computed]
@@ -110,14 +114,17 @@ new #[Title('Statistiche')] class extends Component {
         return DB::table('user_movies')->where('user_id', Auth::id())->where('status', 'watched')->count();
     }
 
+    /**
+     * @return list<array{value: int, unit: string}>
+     */
     #[Computed]
-    public function moviesHours(): int
+    public function moviesTimeParts(): array
     {
-        return intdiv((int) DB::table('user_movies')
+        return WatchTime::humanParts((int) DB::table('user_movies')
             ->join('movies', 'movies.id', '=', 'user_movies.movie_id')
             ->where('user_movies.user_id', Auth::id())
             ->where('user_movies.status', 'watched')
-            ->sum('movies.runtime'), 60);
+            ->sum('movies.runtime'));
     }
 
     #[Computed]
@@ -193,9 +200,9 @@ new #[Title('Statistiche')] class extends Component {
         @endphp
 
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+            @include('partials.stat-time-card', ['parts' => $this->seriesTimeParts])
             @foreach ([
                 ['Episodi visti', $it($this->episodesWatched)],
-                ['Ore', $it($this->seriesHours)],
                 ['Serie seguite', $it($this->seriesFollowed)],
                 ['Da vedere', $it($this->seriesWatchlist)],
                 ['Preferite', $it($this->seriesFavorites)],
@@ -249,9 +256,9 @@ new #[Title('Statistiche')] class extends Component {
         @php $maxDecade = $this->moviesByDecade->max('c') ?: 1; @endphp
 
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+            @include('partials.stat-time-card', ['parts' => $this->moviesTimeParts])
             @foreach ([
                 ['Film visti', $it($this->moviesWatched)],
-                ['Ore', $it($this->moviesHours)],
                 ['Da vedere', $it($this->moviesWatchlist)],
                 ['Preferiti', $it($this->moviesFavorites)],
                 ['Voto medio', $rate($this->moviesAvgRating)],
