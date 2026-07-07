@@ -16,6 +16,8 @@ new #[Title('Importa / Esporta dati')] class extends Component {
 
     public $jsonFile;
 
+    public $extArchive;
+
     public function exportJson()
     {
         $json = (string) json_encode(
@@ -103,6 +105,47 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         }
     }
 
+    public function importExtension(): void
+    {
+        $this->validate(['extArchive' => ['required', 'file', 'mimes:zip', 'max:51200']]);
+
+        $zip = new \ZipArchive;
+        if ($zip->open($this->extArchive->getRealPath()) !== true) {
+            $this->addError('extArchive', __('Impossibile aprire l\'archivio ZIP.'));
+
+            return;
+        }
+
+        $dir = storage_path('app/tvtime-ext-'.Str::uuid());
+        mkdir($dir, 0755, true);
+
+        $hasJson = false;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = basename((string) $zip->getNameIndex($i));
+            if (str_ends_with($name, '.json') && (str_contains($name, 'series') || str_contains($name, 'movies'))) {
+                file_put_contents($dir.'/'.$name, $zip->getFromIndex($i));
+                $hasJson = true;
+            }
+        }
+        $zip->close();
+
+        if (! $hasJson) {
+            $this->cleanup($dir);
+            $this->addError('extArchive', __('Archivio non valido: mancano i file JSON dell\'estensione (series/movies).'));
+
+            return;
+        }
+
+        config(['services.tmdb.token' => (string) Auth::user()->tmdb_token]);
+        Artisan::call('import:tvtime-json', ['path' => $dir, '--user' => (int) Auth::id()]);
+        Artisan::call('shows:sync');
+
+        $this->cleanup($dir);
+        $this->reset('extArchive');
+
+        Flux::toast(variant: 'success', text: __('Import dall\'estensione completato.'));
+    }
+
     private function cleanup(string $dir): void
     {
         foreach (glob($dir.'/*') ?: [] as $file) {
@@ -119,7 +162,7 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 <div class="flex items-start gap-3">
                     <flux:icon.inbox-arrow-down class="mt-0.5 size-5 shrink-0 text-zinc-500" />
                     <div class="flex flex-col gap-1">
-                        <flux:heading size="sm">{{ __('Importa da TV Time') }}</flux:heading>
+                        <flux:heading size="sm">{{ __('Importa export GDPR') }}</flux:heading>
                         <flux:text size="sm" class="text-zinc-500">
                             {{ __('Carica il .zip dell\'export GDPR: importa serie, episodi visti e film. Con un token TMDB attivo, poster e trame vengono sincronizzati subito dopo.') }}
                         </flux:text>
@@ -141,6 +184,34 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
                     <flux:icon.arrow-path class="size-4 animate-spin" />
                     {{ __('Importazione e sincronizzazione in corso… può richiedere qualche minuto.') }}
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <div class="flex items-start gap-3">
+                    <flux:icon.puzzle-piece class="mt-0.5 size-5 shrink-0 text-zinc-500" />
+                    <div class="flex flex-col gap-1">
+                        <flux:heading size="sm">{{ __('Importa da estensione browser') }}</flux:heading>
+                        <flux:text size="sm" class="text-zinc-500">
+                            {{ __('Carica lo .zip esportato dall\'estensione: serie e film in JSON, con matching TMDB preciso tramite gli id esterni (imdb/tvdb).') }}
+                        </flux:text>
+                    </div>
+                </div>
+
+                <form wire:submit="importExtension" class="flex flex-col gap-3">
+                    <x-dropzone model="extArchive" accept=".zip"
+                        :label="__('Trascina lo .zip dell\'estensione o clicca')"
+                        :selected="$extArchive?->getClientOriginalName()" />
+                    <flux:error name="extArchive" />
+                    <flux:button type="submit" variant="primary" icon="arrow-up-tray"
+                        wire:target="importExtension" wire:loading.attr="disabled" class="self-start">
+                        {{ __('Importa') }}
+                    </flux:button>
+                </form>
+
+                <div wire:loading wire:target="importExtension" class="flex items-center gap-2 text-sm text-zinc-500">
+                    <flux:icon.arrow-path class="size-4 animate-spin" />
+                    {{ __('Import e sincronizzazione in corso… può richiedere qualche minuto.') }}
                 </div>
             </div>
 

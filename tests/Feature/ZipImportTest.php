@@ -98,3 +98,27 @@ it('rejects a zip without the records file', function () {
 
     expect(Show::count())->toBe(0);
 });
+
+it('imports the extension json zip from the import page', function () {
+    config(['services.tmdb.token' => 'fake']);
+    Http::fake(['*' => Http::response([], 200)]);
+    $user = User::factory()->create();
+
+    $zip = exportZip([
+        'tvtime-series-2026.json' => json_encode([[
+            'id' => ['tvdb' => 77], 'title' => 'X',
+            'seasons' => [['number' => 1, 'episodes' => [
+                ['number' => 1, 'is_watched' => true, 'watched_at' => '2024-01-01T00:00:00Z'],
+            ]]],
+        ]]),
+        'tvtime-movies-2026.json' => json_encode([]),
+    ]);
+
+    Livewire::actingAs($user)->test('pages::settings.import')
+        ->set('extArchive', $zip)
+        ->call('importExtension')
+        ->assertHasNoErrors();
+
+    expect(Show::where('tvdb_id', 77)->exists())->toBeTrue()
+        ->and(WatchedEpisode::where('user_id', $user->id)->count())->toBe(1);
+});
