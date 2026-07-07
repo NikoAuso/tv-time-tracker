@@ -92,7 +92,6 @@ it('shows genres, trailer, providers and season episodes on the detail page', fu
         ->assertSee('Mistero')
         ->assertSee('Trama')
         ->assertSee('Dove guardarlo')
-        ->assertSee('Conclusa')
         ->assertSee('Pilot')
         ->assertSee('youtube.com/watch?v=abc123', false);
 });

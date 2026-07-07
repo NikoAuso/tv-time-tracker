@@ -331,7 +331,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-4">
     <x-back-button />
 
     <div class="flex gap-4">
@@ -339,22 +339,12 @@ new class extends Component {
             <img src="https://image.tmdb.org/t/p/w342{{ $show->poster_path }}" alt="{{ $show->name }}"
                 class="h-44 w-28 shrink-0 rounded-xl object-cover shadow-lg ring-1 ring-black/10 dark:ring-white/10" />
         @endif
-        <div class="flex flex-1 flex-col gap-2">
+        <div class="flex flex-1 flex-col gap-3">
             <flux:heading size="xl">{{ $show->name }}</flux:heading>
-            <flux:text class="tabular-nums text-zinc-600 dark:text-zinc-300">
+            <flux:text class="leading-relaxed tabular-nums text-zinc-600 dark:text-zinc-300">
                 @if ($show->first_air_date) {{ $show->first_air_date->year }} @endif
                 · {{ trans_choice('{1} :count stagione|[2,*] :count stagioni', $this->seasons->count(), ['count' => $this->seasons->count()]) }}
                 · {{ $this->totalCount }} {{ __('episodi') }}
-                @php
-                    $statusLabel = match ($show->status) {
-                        'Returning Series' => 'In corso',
-                        'Ended' => 'Conclusa',
-                        'Canceled' => 'Cancellata',
-                        'In Production', 'Planned', 'Pilot' => 'In produzione',
-                        default => null,
-                    };
-                @endphp
-                @if ($statusLabel) · {{ __($statusLabel) }} @endif
             </flux:text>
 
             @if ($show->genres)
