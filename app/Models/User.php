@@ -15,17 +15,14 @@ use Illuminate\Support\Str;
 /**
  * @property int $id
  * @property string $name
- * @property string $email
- * @property Carbon|null $email_verified_at
- * @property string $password
  * @property string|null $pin
  * @property string|null $tmdb_token
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'pin', 'tmdb_token', 'remember_token'])]
+#[Fillable(['name'])]
+#[Hidden(['pin', 'tmdb_token', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -49,8 +46,6 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'pin' => 'hashed',
             'tmdb_token' => 'encrypted',
         ];
