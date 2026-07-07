@@ -83,6 +83,39 @@ it('imports movies resolving tmdb from the imdb id', function () {
         ->and($um->rewatch_count)->toBe(1);
 });
 
+it('converges csv and extension movies on the same tmdb id', function () {
+    config(['services.tmdb.token' => 'fake']);
+    Http::fake([
+        '*/find/tt0163025*' => Http::response(['movie_results' => [['id' => 330, 'title' => 'Jurassic Park III']]]),
+        '*/search/movie*' => Http::response(['results' => [['id' => 330, 'title' => 'Jurassic Park III', 'release_date' => '2001-07-18']]]),
+    ]);
+    $user = User::factory()->create();
+
+    // Import CSV: il film è identificato da tvtime_uuid, il tmdb_id è risolto per titolo+anno.
+    $csvDir = sys_get_temp_dir().'/csv_'.uniqid();
+    mkdir($csvDir);
+    file_put_contents($csvDir.'/tracking-prod-records-v2.csv', "key,s_id,series_name\n");
+    file_put_contents(
+        $csvDir.'/tracking-prod-records.csv',
+        "uuid,type,entity_type,movie_name,release_date,runtime,updated_at\n"
+        ."abc,watch,movie,Jurassic Park III,2001-07-18 00:00:00,5460,2024-01-01 00:00:00\n",
+    );
+    Artisan::call('import:tvtime', ['path' => $csvDir, '--user' => $user->id]);
+
+    // Import estensione: stesso film per imdb_id → risolve lo stesso tmdb_id → fonde.
+    $jsonDir = writeExtExport([], [[
+        'id' => ['imdb' => 'tt0163025'], 'title' => 'Jurassic Park III', 'year' => 2001,
+        'is_watched' => true, 'watched_at' => '2024-01-01T00:00:00Z',
+    ]]);
+    Artisan::call('import:tvtime-json', ['path' => $jsonDir, '--user' => $user->id]);
+
+    expect(Movie::count())->toBe(1);
+    $movie = Movie::first();
+    expect($movie->tmdb_id)->toBe(330)
+        ->and($movie->imdb_id)->toBe('tt0163025')
+        ->and($movie->tvtime_uuid)->toBe('abc');
+});
+
 it('is idempotent on re-import', function () {
     config(['services.tmdb.token' => 'fake']);
     Http::fake(['*/find/*' => Http::response(['movie_results' => [['id' => 330]]])]);

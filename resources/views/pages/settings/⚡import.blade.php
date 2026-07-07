@@ -88,15 +88,19 @@ new #[Title('Importa / Esporta dati')] class extends Component {
             return;
         }
 
+        // Token prima dell'import: così il matching dei film risolve il tmdb_id
+        // inline (titolo+anno) e converge con l'import dell'estensione.
+        $token = (string) Auth::user()->tmdb_token;
+        if (filled($token)) {
+            config(['services.tmdb.token' => $token]);
+        }
+
         Artisan::call('import:tvtime', ['path' => $dir, '--user' => (int) Auth::id()]);
 
         $this->cleanup($dir);
         $this->reset('archive');
 
-        $token = (string) Auth::user()->tmdb_token;
-
         if (filled($token)) {
-            config(['services.tmdb.token' => $token]);
             Artisan::call('shows:sync');
             Artisan::call('movies:sync');
             Flux::toast(variant: 'success', text: __('Importazione e sincronizzazione TMDB completate.'));
@@ -162,7 +166,7 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 <div class="flex items-start gap-3">
                     <flux:icon.inbox-arrow-down class="mt-0.5 size-5 shrink-0 text-zinc-500" />
                     <div class="flex flex-col gap-1">
-                        <flux:heading size="sm">{{ __('Importa export GDPR') }}</flux:heading>
+                        <flux:heading size="sm">{{ __('Importa da TV Time') }}</flux:heading>
                         <flux:text size="sm" class="text-zinc-500">
                             {{ __('Dalla pagina GDPR di TV Time accedi e attendi che prepari il file (qualche minuto), poi carica qui lo .zip: importa serie, episodi visti e film. Con un token TMDB attivo, poster e trame si sincronizzano subito dopo.') }}
                         </flux:text>
@@ -194,7 +198,7 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 <div class="flex items-start gap-3">
                     <flux:icon.puzzle-piece class="mt-0.5 size-5 shrink-0 text-zinc-500" />
                     <div class="flex flex-col gap-1">
-                        <flux:heading size="sm">{{ __('Importa da estensione browser') }}</flux:heading>
+                        <flux:heading size="sm">{{ __('Importa da estensione TV Time Out') }}</flux:heading>
                         <flux:text size="sm" class="text-zinc-500">
                             {{ __('Installa l\'estensione «TV Time Out», aprila mentre sei connesso a TV Time nel browser ed esporta in formato ZIP (JSON). Poi carica qui lo .zip: match TMDB preciso tramite gli id esterni (imdb/tvdb).') }}
                         </flux:text>

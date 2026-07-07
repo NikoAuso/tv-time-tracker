@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
+use App\Services\MovieMatcher;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -95,8 +96,9 @@ class ImportTvTime extends Command
 
         /** @var array<string, Movie> $cache */
         $cache = [];
+        $matcher = app(MovieMatcher::class);
 
-        DB::transaction(function () use ($file, $user, &$cache, &$counters): void {
+        DB::transaction(function () use ($file, $user, $matcher, &$cache, &$counters): void {
             foreach ($this->rows($file) as $row) {
                 if (($row['entity_type'] ?? '') !== 'movie') {
                     continue;
@@ -107,13 +109,13 @@ class ImportTvTime extends Command
                 }
 
                 if (! isset($cache[$uuid])) {
-                    $cache[$uuid] = Movie::firstOrCreate(
-                        ['tvtime_uuid' => $uuid],
+                    $cache[$uuid] = $matcher->resolve(
                         [
+                            'tvtime_uuid' => $uuid,
                             'title' => $row['movie_name'] ?: 'Film',
-                            'release_date' => ($row['release_date'] ?? '') ? Carbon::parse($row['release_date']) : null,
-                            'runtime' => ($row['runtime'] ?? '') !== '' ? intdiv((int) $row['runtime'], 60) : null,
+                            'year' => ($row['release_date'] ?? '') ? (int) Carbon::parse($row['release_date'])->year : null,
                         ],
+                        ['runtime' => ($row['runtime'] ?? '') !== '' ? intdiv((int) $row['runtime'], 60) : null],
                     );
                     if ($cache[$uuid]->wasRecentlyCreated) {
                         $counters['movies']++;

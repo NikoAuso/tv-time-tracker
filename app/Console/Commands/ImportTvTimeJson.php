@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Episode;
-use App\Models\Movie;
 use App\Models\Show;
 use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
-use App\Services\Tmdb;
+use App\Services\MovieMatcher;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -119,28 +118,14 @@ class ImportTvTimeJson extends Command
      */
     private function importMovies(array $movies, int $userId): void
     {
-        $tmdb = app(Tmdb::class);
+        $matcher = app(MovieMatcher::class);
 
         foreach ($movies as $m) {
-            $imdb = data_get($m, 'id.imdb');
-            $found = $imdb ? rescue(fn () => $tmdb->findByImdbId((string) $imdb), null, report: false) : null;
-            $tmdbId = $found['id'] ?? null;
-
-            $match = match (true) {
-                $tmdbId !== null => ['tmdb_id' => $tmdbId],
-                $imdb !== null => ['imdb_id' => $imdb],
-                default => ['title' => (string) ($m['title'] ?? '')],
-            };
-
-            $movie = Movie::updateOrCreate($match, $this->present([
-                'tmdb_id' => $tmdbId,
-                'imdb_id' => $imdb,
-                'title' => $found['title'] ?? $m['title'] ?? null,
-                'release_date' => $this->date($found['release_date'] ?? null)
-                    ?? (isset($m['year']) ? Carbon::createFromDate((int) $m['year'], 1, 1)->startOfDay() : null),
-                'poster_path' => $found['poster_path'] ?? null,
-                'overview' => $found['overview'] ?? null,
-            ]));
+            $movie = $matcher->resolve([
+                'imdb_id' => data_get($m, 'id.imdb'),
+                'title' => $m['title'] ?? null,
+                'year' => isset($m['year']) ? (int) $m['year'] : null,
+            ]);
 
             UserMovie::updateOrCreate(
                 ['user_id' => $userId, 'movie_id' => $movie->id],
