@@ -3,7 +3,7 @@
 <div class="relative flex aspect-[2/3] items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 text-3xl font-bold text-zinc-400 transition group-hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500">
     @if ($item['poster'])
         <img src="https://image.tmdb.org/t/p/w342{{ $item['poster'] }}" alt="{{ $item['title'] }}"
-            class="h-full w-full object-cover" />
+            loading="lazy" class="h-full w-full object-cover" />
     @else
         {{ Str::of($item['title'])->trim()->substr(0, 1)->upper() }}
     @endif
