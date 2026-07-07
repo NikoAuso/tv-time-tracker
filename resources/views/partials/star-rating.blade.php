@@ -4,7 +4,7 @@
     @for ($i = 1; $i <= 5; $i++)
         <button type="button" wire:click="rate({{ $i }})"
             aria-label="{{ $i }} {{ __('stelle') }}"
-            class="text-2xl leading-none transition hover:text-amber-400 {{ (int) ($rating ?? 0) >= $i ? 'text-amber-400' : 'text-zinc-300 dark:text-zinc-600' }}">
+            class="text-2xl leading-none transition hover:text-amber-400 active:scale-125 {{ (int) ($rating ?? 0) >= $i ? 'text-amber-400' : 'text-zinc-300 dark:text-zinc-600' }}">
             &#9733;
         </button>
     @endfor

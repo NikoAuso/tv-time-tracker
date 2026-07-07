@@ -276,13 +276,13 @@ new #[Title('Statistiche')] class extends Component {
 
         <div class="flex flex-col gap-3">
             <flux:heading size="lg">{{ __('Episodi registrati per mese') }}</flux:heading>
-            <div class="overflow-x-auto">
-                <div class="flex h-48 min-w-[520px] items-end gap-1">
+            <div class="overflow-x-auto pb-2">
+                <div class="flex h-48 items-end gap-1">
                     @foreach ($months as $m)
-                        <div class="flex flex-1 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $it($m['count']) }}">
+                        <div class="flex w-9 shrink-0 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $it($m['count']) }}">
                             <div class="w-full rounded-t bg-accent transition-all"
                                 style="height: {{ max(2, (int) round($m['count'] / $maxMonth * 160)) }}px"></div>
-                            <flux:text class="rotate-45 whitespace-nowrap text-[10px] text-zinc-400">{{ $m['label'] }}</flux:text>
+                            <flux:text class="rotate-45 whitespace-nowrap text-[11px] text-zinc-500 dark:text-zinc-400">{{ $m['label'] }}</flux:text>
                         </div>
                     @endforeach
                 </div>
