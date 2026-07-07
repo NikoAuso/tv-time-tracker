@@ -16,8 +16,6 @@ new #[Title('Importa / Esporta dati')] class extends Component {
 
     public $jsonFile;
 
-    public $extArchive;
-
     public function exportJson()
     {
         $json = (string) json_encode(
@@ -109,12 +107,33 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         }
     }
 
-    public function importExtension(): void
+    /**
+     * Riceve lo zip dell'estensione come data-URL base64 (via wire:call), non
+     * come upload di file: il PHP embarcato di NativePHP ha upload_max_filesize
+     * a 2 MB e lo zip lo supera, mentre i dati POST sono limitati dal ben più
+     * ampio post_max_size.
+     */
+    public function importExtension(string $name, string $data): void
     {
-        $this->validate(['extArchive' => ['required', 'file', 'mimes:zip', 'max:51200']]);
+        if (! str_ends_with(strtolower($name), '.zip')) {
+            $this->addError('extArchive', __('Serve un archivio .zip.'));
+
+            return;
+        }
+
+        $bytes = base64_decode((string) preg_replace('/^data:[^,]*,/', '', $data), true);
+        if ($bytes === false) {
+            $this->addError('extArchive', __('File non valido.'));
+
+            return;
+        }
+
+        $tmpZip = storage_path('app/tvtime-ext-'.Str::uuid().'.zip');
+        file_put_contents($tmpZip, $bytes);
 
         $zip = new \ZipArchive;
-        if ($zip->open($this->extArchive->getRealPath()) !== true) {
+        if ($zip->open($tmpZip) !== true) {
+            @unlink($tmpZip);
             $this->addError('extArchive', __('Impossibile aprire l\'archivio ZIP.'));
 
             return;
@@ -125,13 +144,14 @@ new #[Title('Importa / Esporta dati')] class extends Component {
 
         $hasJson = false;
         for ($i = 0; $i < $zip->numFiles; $i++) {
-            $name = basename((string) $zip->getNameIndex($i));
-            if (str_ends_with($name, '.json') && (str_contains($name, 'series') || str_contains($name, 'movies'))) {
-                file_put_contents($dir.'/'.$name, $zip->getFromIndex($i));
+            $entry = basename((string) $zip->getNameIndex($i));
+            if (str_ends_with($entry, '.json') && (str_contains($entry, 'series') || str_contains($entry, 'movies'))) {
+                file_put_contents($dir.'/'.$entry, $zip->getFromIndex($i));
                 $hasJson = true;
             }
         }
         $zip->close();
+        @unlink($tmpZip);
 
         if (! $hasJson) {
             $this->cleanup($dir);
@@ -145,7 +165,6 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         Artisan::call('shows:sync');
 
         $this->cleanup($dir);
-        $this->reset('extArchive');
 
         Flux::toast(variant: 'success', text: __('Import dall\'estensione completato.'));
     }
@@ -208,20 +227,51 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                     </div>
                 </div>
 
-                <form wire:submit="importExtension" class="flex flex-col gap-3">
-                    <x-dropzone model="extArchive" accept=".zip"
-                        :label="__('Trascina lo .zip dell\'estensione o clicca')"
-                        :selected="$extArchive?->getClientOriginalName()" />
+                <div class="flex flex-col gap-3"
+                    x-data="{
+                        dragging: false,
+                        name: null,
+                        reading: false,
+                        async send(file) {
+                            if (! file) return;
+                            this.name = file.name;
+                            this.reading = true;
+                            try {
+                                const b64 = await new Promise((res, rej) => {
+                                    const r = new FileReader();
+                                    r.onload = () => res(r.result);
+                                    r.onerror = rej;
+                                    r.readAsDataURL(file);
+                                });
+                                await $wire.importExtension(file.name, b64);
+                            } finally {
+                                this.reading = false;
+                                this.name = null;
+                            }
+                        },
+                    }">
+                    <label
+                        x-on:dragover.prevent="dragging = true"
+                        x-on:dragleave.prevent="dragging = false"
+                        x-on:drop.prevent="dragging = false; send($event.dataTransfer.files[0])"
+                        :class="dragging ? 'border-accent bg-accent/10' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600 dark:hover:border-zinc-500'"
+                        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition">
+                        <input type="file" accept=".zip" class="sr-only"
+                            x-on:change="send($event.target.files[0]); $event.target.value = ''" />
+                        <div x-show="! reading" class="flex flex-col items-center gap-2">
+                            <flux:icon.arrow-up-tray class="size-8 text-zinc-400" />
+                            <flux:text class="font-medium">{{ __('Trascina lo .zip dell\'estensione o clicca') }}</flux:text>
+                        </div>
+                        <div x-show="reading" class="flex items-center gap-2 text-sm text-accent">
+                            <flux:icon.arrow-path class="size-5 animate-spin" />
+                            <span x-text="name"></span>
+                        </div>
+                    </label>
                     <flux:error name="extArchive" />
-                    <flux:button type="submit" variant="primary" icon="arrow-up-tray"
-                        wire:target="importExtension" wire:loading.attr="disabled" class="self-start">
-                        {{ __('Importa') }}
-                    </flux:button>
-                </form>
-
-                <div wire:loading wire:target="importExtension" class="flex items-center gap-2 text-sm text-zinc-500">
-                    <flux:icon.arrow-path class="size-4 animate-spin" />
-                    {{ __('Import e sincronizzazione in corso… può richiedere qualche minuto.') }}
+                    <div wire:loading wire:target="importExtension" class="flex items-center gap-2 text-sm text-zinc-500">
+                        <flux:icon.arrow-path class="size-4 animate-spin" />
+                        {{ __('Import e sincronizzazione in corso… può richiedere qualche minuto.') }}
+                    </div>
                 </div>
             </div>
 

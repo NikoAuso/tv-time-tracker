@@ -115,8 +115,7 @@ it('imports the extension json zip from the import page', function () {
     ]);
 
     Livewire::actingAs($user)->test('pages::settings.import')
-        ->set('extArchive', $zip)
-        ->call('importExtension')
+        ->call('importExtension', 'export.zip', base64_encode($zip->getContent()))
         ->assertHasNoErrors();
 
     expect(Show::where('tvdb_id', 77)->exists())->toBeTrue()
