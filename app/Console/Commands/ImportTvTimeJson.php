@@ -33,8 +33,8 @@ class ImportTvTimeJson extends Command
         $userId = (int) $this->option('user');
         $dir = rtrim($this->argument('path'), '/');
 
-        $seriesFile = collect(glob($dir.'/*series*.json'))->first();
-        $moviesFile = collect(glob($dir.'/*movies*.json'))->first();
+        $seriesFile = collect(glob($dir.'/*series*.json') ?: [])->first();
+        $moviesFile = collect(glob($dir.'/*movies*.json') ?: [])->first();
 
         if (! $seriesFile && ! $moviesFile) {
             $this->error('Nessun file *series*.json o *movies*.json in: '.$dir);
