@@ -271,10 +271,10 @@ new #[Title('Profilo')] class extends Component {
                 </a>
 
                 <a href="{{ route('import.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
-                    <flux:icon.arrow-up-tray class="size-5 shrink-0 text-zinc-500" />
+                    <flux:icon.arrows-up-down class="size-5 shrink-0 text-zinc-500" />
                     <div class="flex min-w-0 flex-1 flex-col">
-                        <flux:text class="font-medium">{{ __('Importa dati') }}</flux:text>
-                        <flux:text size="sm" class="text-zinc-500">{{ __('Da export TV Time') }}</flux:text>
+                        <flux:text class="font-medium">{{ __('Importa / Esporta') }}</flux:text>
+                        <flux:text size="sm" class="text-zinc-500">{{ __('TV Time e backup JSON') }}</flux:text>
                     </div>
                     <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
                 </a>

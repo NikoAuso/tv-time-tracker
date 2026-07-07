@@ -9,7 +9,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-new #[Title('Importa dati')] class extends Component {
+new #[Title('Importa / Esporta dati')] class extends Component {
     use WithFileUploads;
 
     public $archive;
@@ -113,43 +113,55 @@ new #[Title('Importa dati')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <x-pages::settings.layout :heading="__('Importa dati')" :subheading="__('Importa i tuoi dati dall\'export di TV Time')">
-        <div class="my-6 flex w-full max-w-md flex-col gap-8">
-            <flux:text class="text-zinc-500">
-                {{ __('Carica il file .zip dell\'export GDPR di TV Time. Verranno importati serie, episodi visti e film; con un token TMDB attivo poster e trame vengono sincronizzati subito dopo.') }}
-            </flux:text>
+    <x-pages::settings.layout :heading="__('Importa / Esporta dati')" :subheading="__('Importa da TV Time o gestisci i backup dell\'app')">
+        <div class="my-6 flex w-full max-w-md flex-col gap-6">
+            <div class="flex flex-col gap-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <div class="flex items-start gap-3">
+                    <flux:icon.inbox-arrow-down class="mt-0.5 size-5 shrink-0 text-zinc-500" />
+                    <div class="flex flex-col gap-1">
+                        <flux:heading size="sm">{{ __('Importa da TV Time') }}</flux:heading>
+                        <flux:text size="sm" class="text-zinc-500">
+                            {{ __('Carica il .zip dell\'export GDPR: importa serie, episodi visti e film. Con un token TMDB attivo, poster e trame vengono sincronizzati subito dopo.') }}
+                        </flux:text>
+                    </div>
+                </div>
 
-            <form wire:submit="import" class="flex flex-col gap-4">
-                <flux:input type="file" wire:model="archive" accept=".zip" :label="__('Archivio .zip')" />
-                <flux:error name="archive" />
-                <flux:button type="submit" variant="primary" icon="arrow-up-tray" class="self-start">
-                    {{ __('Importa') }}
-                </flux:button>
-            </form>
+                <form wire:submit="import" class="flex flex-col gap-3">
+                    <flux:input type="file" wire:model="archive" accept=".zip" :label="__('Archivio .zip')" />
+                    <flux:error name="archive" />
+                    <flux:button type="submit" variant="primary" icon="arrow-up-tray"
+                        wire:target="import" wire:loading.attr="disabled" class="self-start">
+                        {{ __('Importa') }}
+                    </flux:button>
+                </form>
 
-            <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
-                <flux:icon.arrow-path class="size-4 animate-spin" />
-                {{ __('Importazione e sincronizzazione in corso… può richiedere qualche minuto.') }}
+                <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
+                    <flux:icon.arrow-path class="size-4 animate-spin" />
+                    {{ __('Importazione e sincronizzazione in corso… può richiedere qualche minuto.') }}
+                </div>
             </div>
 
-            <flux:separator />
-
-            <div class="flex flex-col gap-4">
-                <div class="flex flex-col gap-1">
-                    <flux:heading size="sm">{{ __('Backup TvTimeTracker') }}</flux:heading>
-                    <flux:text size="sm" class="text-zinc-500">
-                        {{ __('Esporta tutti i tuoi dati in JSON, o importa un backup creato da questa app (unione, mai duplicati).') }}
-                    </flux:text>
+            <div class="flex flex-col gap-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <div class="flex items-start gap-3">
+                    <flux:icon.archive-box class="mt-0.5 size-5 shrink-0 text-zinc-500" />
+                    <div class="flex flex-col gap-1">
+                        <flux:heading size="sm">{{ __('Backup TvTimeTracker') }}</flux:heading>
+                        <flux:text size="sm" class="text-zinc-500">
+                            {{ __('Esporta tutti i tuoi dati in JSON, o importa un backup creato da questa app (unione, mai duplicati).') }}
+                        </flux:text>
+                    </div>
                 </div>
 
                 <flux:button wire:click="exportJson" variant="primary" icon="arrow-down-tray" class="self-start">
                     {{ __('Esporta dati (JSON)') }}
                 </flux:button>
 
+                <flux:separator variant="subtle" />
+
                 <form wire:submit="importJson" class="flex flex-col gap-3">
-                    <flux:input type="file" wire:model="jsonFile" accept=".json" :label="__('Backup .json')" />
+                    <flux:input type="file" wire:model="jsonFile" accept=".json" :label="__('Ripristina da backup .json')" />
                     <flux:error name="jsonFile" />
-                    <flux:button type="submit" variant="primary" icon="arrow-up-tray" class="self-start">
+                    <flux:button type="submit" variant="outline" icon="arrow-up-tray" class="self-start">
                         {{ __('Importa backup') }}
                     </flux:button>
                 </form>
