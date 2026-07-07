@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int|null $tmdb_id
  * @property string|null $tvtime_uuid
+ * @property string|null $imdb_id
  * @property string $title
  * @property Carbon|null $release_date
  * @property string|null $poster_path
@@ -25,7 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['tmdb_id', 'tvtime_uuid', 'title', 'release_date', 'poster_path', 'overview', 'runtime', 'genres'])]
+#[Fillable(['tmdb_id', 'tvtime_uuid', 'imdb_id', 'title', 'release_date', 'poster_path', 'overview', 'runtime', 'genres'])]
 class Movie extends Model
 {
     /** @use HasFactory<MovieFactory> */

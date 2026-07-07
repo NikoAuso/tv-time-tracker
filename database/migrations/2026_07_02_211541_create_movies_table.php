@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('tmdb_id')->nullable()->index();
             $table->string('tvtime_uuid')->nullable()->index();
+            $table->string('imdb_id')->nullable()->index();
             $table->string('title');
             $table->date('release_date')->nullable();
             $table->string('poster_path')->nullable();

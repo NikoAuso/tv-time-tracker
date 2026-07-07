@@ -37,6 +37,18 @@ class Tmdb
     }
 
     /**
+     * Risolve un film TMDB da un id IMDB (es. "tt0163025"), match esatto.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByImdbId(string $imdbId): ?array
+    {
+        $response = $this->client()->get("/find/{$imdbId}", ['external_source' => 'imdb_id']);
+
+        return $response->ok() ? ($response->json('movie_results.0') ?: null) : null;
+    }
+
+    /**
      * Dettaglio serie TMDB (include number_of_episodes, status, seasons).
      *
      * @return array<string, mixed>|null
