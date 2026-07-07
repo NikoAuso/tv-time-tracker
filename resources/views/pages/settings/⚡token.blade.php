@@ -33,41 +33,54 @@ new #[Title('Token TMDB')] class extends Component {
 
 <section class="w-full">
     <x-pages::settings.layout :heading="__('Token TMDB')" :subheading="__('Serve per scaricare poster, trame ed episodi')">
-        <div class="my-6 flex w-full max-w-md flex-col gap-8">
-            <div class="flex flex-col gap-4">
+        <div class="my-6 flex w-full max-w-md flex-col gap-6">
+            <div class="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50">
+                <flux:icon.key class="mt-0.5 size-5 shrink-0 text-zinc-500" />
                 <div class="flex flex-col gap-1">
-                    <flux:text size="sm" class="text-zinc-500">
-                        {{ __('Ogni utente usa il proprio token TMDB personale.') }}
+                    <flux:text size="sm" class="text-zinc-600 dark:text-zinc-300">
+                        {{ __('I metadati arrivano da TMDB e ogni utente usa il proprio token personale, salvato solo su questo dispositivo.') }}
                     </flux:text>
                     <flux:modal.trigger name="tmdb-guide">
-                        <flux:link class="cursor-pointer text-sm">{{ __('Come ottenere il token →') }}</flux:link>
+                        <flux:link class="cursor-pointer text-sm font-medium">{{ __('Come ottenere il token →') }}</flux:link>
                     </flux:modal.trigger>
                 </div>
+            </div>
 
-                @unless (Auth::user()->hasTmdbToken())
-                    <div class="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700/50 dark:bg-amber-950/40">
-                        <flux:icon.exclamation-triangle class="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                        <flux:text class="text-sm text-amber-900 dark:text-amber-200">
-                            {{ __('Per usare l\'app devi inserire il tuo token TMDB. Senza, ricerca, poster e sincronizzazione non sono disponibili.') }}
-                        </flux:text>
-                    </div>
-                @endunless
-
-                @if (Auth::user()->hasTmdbToken())
-                    <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                        <flux:text>{{ __('Un token è attivo.') }}</flux:text>
+            @if (Auth::user()->hasTmdbToken())
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center gap-3 rounded-xl border border-green-300 bg-green-50 p-4 dark:border-green-800/50 dark:bg-green-950/30">
+                        <flux:icon.check-badge class="size-6 shrink-0 text-green-600 dark:text-green-500" />
+                        <div class="flex min-w-0 flex-1 flex-col">
+                            <flux:heading class="text-green-900 dark:text-green-200">{{ __('Token attivo') }}</flux:heading>
+                            <flux:text size="sm" class="text-green-700 dark:text-green-300/80">
+                                {{ __('Ricerca, poster e sincronizzazione sono disponibili.') }}
+                            </flux:text>
+                        </div>
                         <x-remove-button size="sm" icon="trash" wire:click="removeToken"
                             wire:confirm="{{ __('Rimuovere il token TMDB?') }}">{{ __('Rimuovi') }}</x-remove-button>
                     </div>
-                @endif
+                    <flux:text size="sm" class="px-1 text-zinc-500">
+                        {{ __('Per usarne uno diverso, rimuovi prima quello attuale.') }}
+                    </flux:text>
+                </div>
+            @else
+                <div class="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700/50 dark:bg-amber-950/40">
+                    <flux:icon.exclamation-triangle class="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <flux:text class="text-sm text-amber-900 dark:text-amber-200">
+                        {{ __('Per usare l\'app devi inserire il tuo token TMDB. Senza, ricerca, poster e sincronizzazione non sono disponibili.') }}
+                    </flux:text>
+                </div>
 
                 <form wire:submit="saveToken" class="flex flex-col gap-3">
-                    <flux:input wire:model="tmdbToken" type="password"
-                        :label="Auth::user()->hasTmdbToken() ? __('Nuovo token') : __('Token')" />
+                    <flux:input wire:model="tmdbToken" type="password" :label="__('Token')"
+                        placeholder="{{ __('Incolla qui il Read Access Token') }}" />
                     <flux:error name="tmdbToken" />
-                    <flux:button type="submit" variant="primary" class="self-start">{{ __('Salva token') }}</flux:button>
+                    <flux:button type="submit" variant="primary" icon="check"
+                        wire:target="saveToken" wire:loading.attr="disabled" class="self-start">
+                        {{ __('Salva token') }}
+                    </flux:button>
                 </form>
-            </div>
+            @endif
 
             <flux:modal name="tmdb-guide" class="max-w-md">
                 <div class="flex max-h-[80vh] flex-col gap-5 overflow-y-auto py-2">
