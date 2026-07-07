@@ -6,6 +6,7 @@
 /public/hot
 /public/storage
 /storage/*.key
+/credentials
 /storage/pail
 /vendor
 .env
