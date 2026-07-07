@@ -190,7 +190,11 @@ new #[Title('Libreria')] class extends Component
     </div>
 
     @if ($this->items->isEmpty())
-        <flux:text class="py-12 text-center">{{ __('Niente in questa sezione.') }}</flux:text>
+        <div class="flex flex-col items-center gap-2 py-16 text-center">
+            <flux:icon.film class="size-10 text-zinc-400" />
+            <flux:heading size="lg">{{ __('Niente qui') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('Nessun titolo in questa sezione. Aggiungine dalla ricerca.') }}</flux:text>
+        </div>
     @else
         <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             @foreach ($this->items as $item)

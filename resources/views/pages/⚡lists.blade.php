@@ -57,7 +57,11 @@ new #[Title('Liste')] class extends Component {
     <flux:error name="newName" />
 
     @if ($this->lists->isEmpty())
-        <flux:text class="py-12 text-center text-zinc-500">{{ __('Nessuna lista. Creane una qui sopra.') }}</flux:text>
+        <div class="flex flex-col items-center gap-2 py-16 text-center">
+            <flux:icon.queue-list class="size-10 text-zinc-400" />
+            <flux:heading size="lg">{{ __('Nessuna lista') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('Crea la tua prima lista qui sopra per organizzare serie e film.') }}</flux:text>
+        </div>
     @else
         <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
             @foreach ($this->lists as $list)
