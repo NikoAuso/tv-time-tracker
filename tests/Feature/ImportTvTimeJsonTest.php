@@ -57,7 +57,10 @@ it('imports series, episodes and watches from the extension json', function () {
 
 it('imports movies resolving tmdb from the imdb id', function () {
     config(['services.tmdb.token' => 'fake']);
-    Http::fake(['*/find/tt0163025*' => Http::response(['movie_results' => [['id' => 330]]])]);
+    Http::fake(['*/find/tt0163025*' => Http::response(['movie_results' => [[
+        'id' => 330, 'title' => 'Jurassic Park III', 'release_date' => '2001-07-18',
+        'poster_path' => '/jp3.jpg', 'overview' => 'Dinosauri.',
+    ]]])]);
     $user = User::factory()->create();
 
     $dir = writeExtExport([], [[
@@ -72,7 +75,8 @@ it('imports movies resolving tmdb from the imdb id', function () {
     $movie = Movie::where('imdb_id', 'tt0163025')->first();
     expect($movie)->not->toBeNull()
         ->and($movie->tmdb_id)->toBe(330)
-        ->and($movie->title)->toBe('Jurassic Park III');
+        ->and($movie->title)->toBe('Jurassic Park III')
+        ->and($movie->poster_path)->toBe('/jp3.jpg');
 
     $um = UserMovie::where(['user_id' => $user->id, 'movie_id' => $movie->id])->first();
     expect($um->status)->toBe('watched')

@@ -123,11 +123,8 @@ class ImportTvTimeJson extends Command
 
         foreach ($movies as $m) {
             $imdb = data_get($m, 'id.imdb');
-            $tmdbId = null;
-            if ($imdb) {
-                $found = rescue(fn () => $tmdb->findByImdbId((string) $imdb), null, report: false);
-                $tmdbId = $found['id'] ?? null;
-            }
+            $found = $imdb ? rescue(fn () => $tmdb->findByImdbId((string) $imdb), null, report: false) : null;
+            $tmdbId = $found['id'] ?? null;
 
             $match = match (true) {
                 $tmdbId !== null => ['tmdb_id' => $tmdbId],
@@ -138,8 +135,11 @@ class ImportTvTimeJson extends Command
             $movie = Movie::updateOrCreate($match, $this->present([
                 'tmdb_id' => $tmdbId,
                 'imdb_id' => $imdb,
-                'title' => $m['title'] ?? null,
-                'release_date' => isset($m['year']) ? Carbon::createFromDate((int) $m['year'], 1, 1)->startOfDay() : null,
+                'title' => $found['title'] ?? $m['title'] ?? null,
+                'release_date' => $this->date($found['release_date'] ?? null)
+                    ?? (isset($m['year']) ? Carbon::createFromDate((int) $m['year'], 1, 1)->startOfDay() : null),
+                'poster_path' => $found['poster_path'] ?? null,
+                'overview' => $found['overview'] ?? null,
             ]));
 
             UserMovie::updateOrCreate(
