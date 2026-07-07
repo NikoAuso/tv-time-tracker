@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('episode_id')->constrained()->cascadeOnDelete();
             $table->timestamp('watched_at')->nullable();
+            $table->unsignedTinyInteger('rating')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'episode_id']);

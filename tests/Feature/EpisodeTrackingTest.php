@@ -150,3 +150,48 @@ it('renders the episode detail and toggles it watched', function () {
         ->call('toggle');
     expect(WatchedEpisode::where(['user_id' => $user->id, 'episode_id' => $episode->id])->exists())->toBeTrue();
 });
+
+it('links back to the show and rates the episode', function () {
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['name' => 'House']);
+    $episode = Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 2, 'name' => 'Paternity']);
+
+    Livewire::actingAs($user)->test('pages::episode', ['episode' => $episode])
+        ->assertSee('House')
+        ->assertSeeHtml(route('shows.show', $show))
+        ->call('rate', 4);
+
+    $watch = WatchedEpisode::where(['user_id' => $user->id, 'episode_id' => $episode->id])->first();
+    expect($watch)->not->toBeNull()
+        ->and($watch->rating)->toBe(4)
+        ->and($watch->watched_at)->not->toBeNull();
+});
+
+it('clears the episode rating when rating zero', function () {
+    $user = User::factory()->create();
+    $episode = Episode::factory()->create();
+    WatchedEpisode::factory()->create(['user_id' => $user->id, 'episode_id' => $episode->id, 'rating' => 5]);
+
+    Livewire::actingAs($user)->test('pages::episode', ['episode' => $episode])
+        ->call('rate', 0);
+
+    expect(WatchedEpisode::where(['user_id' => $user->id, 'episode_id' => $episode->id])->first()->rating)->toBeNull();
+});
+
+it('shows where to watch the episode', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/watch/providers*' => Http::response(['results' => ['IT' => [
+            'link' => 'https://justwatch/it',
+            'flatrate' => [['provider_name' => 'Netflix', 'logo_path' => '/n.jpg']],
+        ]]]),
+    ]);
+
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['tmdb_id' => 42]);
+    $episode = Episode::factory()->create(['show_id' => $show->id]);
+
+    Livewire::actingAs($user)->test('pages::episode', ['episode' => $episode])
+        ->assertSee('Dove vederlo')
+        ->assertSee('Netflix');
+});

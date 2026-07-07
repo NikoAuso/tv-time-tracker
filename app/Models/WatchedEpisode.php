@@ -16,10 +16,11 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $episode_id
  * @property Carbon|null $watched_at
+ * @property int|null $rating
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'episode_id', 'watched_at'])]
+#[Fillable(['user_id', 'episode_id', 'watched_at', 'rating'])]
 class WatchedEpisode extends Model
 {
     /** @use HasFactory<WatchedEpisodeFactory> */
@@ -44,6 +45,7 @@ class WatchedEpisode extends Model
     {
         return [
             'watched_at' => 'datetime',
+            'rating' => 'integer',
         ];
     }
 }
