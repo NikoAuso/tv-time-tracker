@@ -87,8 +87,10 @@ new #[Title('Serie da vedere')] class extends Component {
                                 S{{ $episode->season_number }}E{{ $episode->episode_number }}
                             </span>
                         </a>
-                        <flux:button size="xs" variant="primary" icon="check" class="absolute right-1.5 top-1.5"
-                            wire:click="markWatched({{ $episode->id }})" aria-label="{{ __('Segna visto') }}" />
+                        <div class="absolute right-1.5 top-1.5">
+                            <flux:button size="xs" variant="primary" icon="check"
+                                wire:click="markWatched({{ $episode->id }})" aria-label="{{ __('Segna visto') }}" />
+                        </div>
                     </div>
                     <div class="min-w-0">
                         <flux:text size="sm" class="truncate font-medium">{{ $episode->show->name }}</flux:text>
