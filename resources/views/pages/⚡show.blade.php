@@ -241,6 +241,11 @@ new class extends Component {
         );
     }
 
+    public function markAll(): void
+    {
+        $this->markEpisodes($this->show->episodes()->pluck('id'));
+    }
+
     public function markUpTo(int $episodeId): void
     {
         $target = Episode::findOrFail($episodeId);
@@ -436,7 +441,14 @@ new class extends Component {
     <flux:separator />
 
     <div class="flex flex-col gap-3">
-        <flux:heading size="lg">{{ __('Episodi') }}</flux:heading>
+        <div class="flex items-center justify-between gap-3">
+            <flux:heading size="lg">{{ __('Episodi') }}</flux:heading>
+            @if ($this->totalCount && $this->watchedCount < $this->totalCount)
+                <flux:button size="sm" icon="check" variant="primary"
+                    wire:click="markAll"
+                    aria-label="{{ __('Segna tutta la serie come vista') }}">{{ __('Segna tutto') }}</flux:button>
+            @endif
+        </div>
 
         @forelse ($this->seasons as $seasonNumber => $episodes)
             @php $seen = $episodes->where('is_watched')->count(); @endphp

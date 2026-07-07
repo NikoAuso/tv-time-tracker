@@ -109,6 +109,16 @@ it('marks a whole season watched', function () {
     expect(WatchedEpisode::where('episode_id', $s2->id)->exists())->toBeFalse();
 });
 
+it('marks the whole series watched', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[1, 1], [1, 2], [2, 1]]);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('markAll');
+
+    expect(WatchedEpisode::where('user_id', $user->id)->count())->toBe(3);
+});
+
 it('marks all episodes up to a given one', function () {
     $user = User::factory()->create();
     $show = showWithEpisodes([[1, 1], [1, 2], [2, 1], [2, 2]]);
