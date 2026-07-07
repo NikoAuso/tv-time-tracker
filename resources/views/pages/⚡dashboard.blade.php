@@ -88,8 +88,11 @@ new #[Title('Serie da vedere')] class extends Component {
                             </span>
                         </a>
                         <div class="absolute right-1.5 top-1.5">
-                            <flux:button size="xs" variant="primary" icon="check"
+                            <flux:button wire:loading.remove wire:target="markWatched({{ $episode->id }})"
+                                size="xs" variant="primary" icon="check"
                                 wire:click="markWatched({{ $episode->id }})" aria-label="{{ __('Segna visto') }}" />
+                            <flux:button wire:loading wire:target="markWatched({{ $episode->id }})"
+                                size="xs" variant="primary" color="green" icon="check" aria-label="{{ __('Visto') }}" />
                         </div>
                     </div>
                     <div class="min-w-0">
@@ -114,8 +117,11 @@ new #[Title('Serie da vedere')] class extends Component {
                         </div>
                     </a>
                     <div class="flex shrink-0 items-center">
-                        <flux:button size="sm" variant="primary" icon="check"
+                        <flux:button wire:loading.remove wire:target="markWatched({{ $episode->id }})"
+                            size="sm" variant="primary" icon="check"
                             wire:click="markWatched({{ $episode->id }})" aria-label="{{ __('Segna visto') }}" />
+                        <flux:button wire:loading wire:target="markWatched({{ $episode->id }})"
+                            size="sm" variant="primary" color="green" icon="check" aria-label="{{ __('Visto') }}" />
                     </div>
                 </div>
             @endforeach
