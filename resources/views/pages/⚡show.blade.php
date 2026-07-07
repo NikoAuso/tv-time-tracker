@@ -492,7 +492,7 @@ new class extends Component {
                                 class="flex size-8 shrink-0 items-center justify-center rounded-full border transition
                                     {{ $episode->is_watched
                                         ? 'border-green-600 bg-green-600 text-white'
-                                        : 'border-zinc-300 text-transparent hover:border-green-500 hover:text-green-500 dark:border-zinc-600' }}">
+                                        : 'border-zinc-300 bg-white text-zinc-400 hover:border-green-500 hover:text-green-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-500' }}">
                                 <flux:icon.check variant="micro" class="size-4" />
                             </button>
                         </div>
