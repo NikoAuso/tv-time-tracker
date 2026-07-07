@@ -14,10 +14,6 @@ use Livewire\Component;
 new class extends Component {
     public Show $show;
 
-    public string $newSeason = '';
-
-    public string $newEpisode = '';
-
     /** @var list<int> Stagioni aperte nell'accordion. */
     public array $openSeasons = [];
 
@@ -287,29 +283,6 @@ new class extends Component {
         $this->refreshLists();
     }
 
-    public function addEpisode(): void
-    {
-        $validated = $this->validate([
-            'newSeason' => ['required', 'integer', 'min:0'],
-            'newEpisode' => ['required', 'integer', 'min:0'],
-        ]);
-
-        $episode = Episode::firstOrCreate([
-            'show_id' => $this->show->id,
-            'season_number' => (int) $validated['newSeason'],
-            'episode_number' => (int) $validated['newEpisode'],
-        ]);
-
-        WatchedEpisode::firstOrCreate(
-            ['user_id' => Auth::id(), 'episode_id' => $episode->id],
-            ['watched_at' => now()],
-        );
-
-        $this->ensureFollowing();
-        $this->reset('newSeason', 'newEpisode');
-        $this->refreshLists();
-    }
-
     /**
      * Segnare un episodio come visto porta la serie in libreria come "In corso":
      * una serie "Da vedere" (watchlist) ha per definizione 0 episodi visti.
@@ -507,11 +480,4 @@ new class extends Component {
         @endforelse
     </div>
 
-    <flux:separator />
-
-    <form wire:submit="addEpisode" class="flex flex-wrap items-end gap-3">
-        <flux:input wire:model="newSeason" type="number" min="0" :label="__('Stagione')" class="w-24" />
-        <flux:input wire:model="newEpisode" type="number" min="0" :label="__('Episodio')" class="w-24" />
-        <flux:button type="submit" variant="outline" icon="plus">{{ __('Aggiungi mancante') }}</flux:button>
-    </form>
 </div>

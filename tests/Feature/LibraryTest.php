@@ -134,21 +134,6 @@ it('toggles an episode watched state', function () {
     expect(WatchedEpisode::where('user_id', $user->id)->where('episode_id', $episode->id)->exists())->toBeTrue();
 });
 
-it('adds a watched episode manually', function () {
-    $user = User::factory()->create();
-    $show = Show::factory()->create();
-
-    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
-        ->set('newSeason', 2)
-        ->set('newEpisode', 5)
-        ->call('addEpisode')
-        ->assertHasNoErrors();
-
-    $episode = Episode::where('show_id', $show->id)->where('season_number', 2)->where('episode_number', 5)->first();
-    expect($episode)->not->toBeNull();
-    expect(WatchedEpisode::where('user_id', $user->id)->where('episode_id', $episode->id)->exists())->toBeTrue();
-});
-
 it('marks a series as "da vedere" from its detail page', function () {
     $user = User::factory()->create();
     $show = Show::factory()->create();
