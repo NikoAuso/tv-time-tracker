@@ -127,7 +127,10 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 </div>
 
                 <form wire:submit="import" class="flex flex-col gap-3">
-                    <flux:input type="file" wire:model="archive" accept=".zip" :label="__('Archivio .zip')" />
+                    <x-dropzone model="archive" accept=".zip"
+                        :label="__('Trascina il file .zip qui o clicca per sceglierlo')"
+                        :hint="__('Export GDPR di TV Time')"
+                        :selected="$archive?->getClientOriginalName()" />
                     <flux:error name="archive" />
                     <flux:button type="submit" variant="primary" icon="arrow-up-tray"
                         wire:target="import" wire:loading.attr="disabled" class="self-start">
@@ -159,7 +162,9 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 <flux:separator variant="subtle" />
 
                 <form wire:submit="importJson" class="flex flex-col gap-3">
-                    <flux:input type="file" wire:model="jsonFile" accept=".json" :label="__('Ripristina da backup .json')" />
+                    <x-dropzone model="jsonFile" accept=".json"
+                        :label="__('Trascina il backup .json qui o clicca')"
+                        :selected="$jsonFile?->getClientOriginalName()" />
                     <flux:error name="jsonFile" />
                     <flux:button type="submit" variant="outline" icon="arrow-up-tray" class="self-start">
                         {{ __('Importa backup') }}
