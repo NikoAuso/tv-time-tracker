@@ -28,7 +28,7 @@ new #[Title('Cerca')] class extends Component {
 
     private function token(): string
     {
-        return Auth::user()->tmdb_token ?: (string) config('services.tmdb.token');
+        return (string) Auth::user()->tmdb_token;
     }
 
     public function hasToken(): bool

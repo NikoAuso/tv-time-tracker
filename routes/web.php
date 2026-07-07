@@ -12,7 +12,7 @@ Route::post('lock', function () {
     return redirect()->route('unlock');
 })->name('lock');
 
-Route::middleware(['pin'])->group(function () {
+Route::middleware(['pin', 'tmdb'])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 
     Route::livewire('library', 'pages::library')->name('library');

@@ -34,7 +34,7 @@ function exportZip(array $files): UploadedFile
 }
 
 it('imports shows and watches from a tv time zip', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->withoutTmdbToken()->create();
 
     Livewire::actingAs($user)->test('pages::settings.import')
         ->set('archive', exportZip(['tracking-prod-records-v2.csv' => recordsCsv()]))

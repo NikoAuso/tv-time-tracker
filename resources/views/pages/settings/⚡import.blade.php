@@ -115,7 +115,7 @@ new #[Title('Importa dati')] class extends Component {
         $this->cleanup($dir);
         $this->reset('archive');
 
-        $token = Auth::user()->tmdb_token ?: (string) config('services.tmdb.token');
+        $token = (string) Auth::user()->tmdb_token;
 
         if (filled($token)) {
             config(['services.tmdb.token' => $token]);
@@ -149,6 +149,15 @@ new #[Title('Importa dati')] class extends Component {
                         <flux:link class="cursor-pointer text-sm">{{ __('Come ottenere il token →') }}</flux:link>
                     </flux:modal.trigger>
                 </div>
+
+                @unless (Auth::user()->hasTmdbToken())
+                    <div class="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700/50 dark:bg-amber-950/40">
+                        <flux:icon.exclamation-triangle class="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <flux:text class="text-sm text-amber-900 dark:text-amber-200">
+                            {{ __('Per usare l\'app devi inserire il tuo token TMDB. Senza, ricerca, poster e sincronizzazione non sono disponibili.') }}
+                        </flux:text>
+                    </div>
+                @endunless
 
                 @if (Auth::user()->hasTmdbToken())
                     <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">

@@ -15,7 +15,7 @@ uses(RefreshDatabase::class);
 it('shows a token notice when no TMDB token is set', function () {
     config(['services.tmdb.token' => null]);
 
-    Livewire::actingAs(User::factory()->create())->test('pages::search')
+    Livewire::actingAs(User::factory()->withoutTmdbToken()->create())->test('pages::search')
         ->assertSee('token TMDB');
 });
 
@@ -157,8 +157,7 @@ it('opens a movie from search into the catalog', function () {
 });
 
 it('opens an already-local show without a TMDB token', function () {
-    config(['services.tmdb.token' => null]);
-    $user = User::factory()->create();
+    $user = User::factory()->withoutTmdbToken()->create();
     $show = Show::factory()->create(['tmdb_id' => 700]);
 
     Livewire::actingAs($user)->test('pages::search')

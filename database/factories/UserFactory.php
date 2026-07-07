@@ -30,7 +30,18 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'tmdb_token' => 'test-tmdb-token',
         ];
+    }
+
+    /**
+     * Utente senza token TMDB (blocca il gate che ne richiede uno).
+     */
+    public function withoutTmdbToken(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tmdb_token' => null,
+        ]);
     }
 
     /**

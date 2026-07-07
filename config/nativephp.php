@@ -163,6 +163,7 @@ return [
         '*_SECRET',
         'DB_PASSWORD',
         'DB_USERNAME',
+        'TMDB_TOKEN',
     ],
 
     /*
