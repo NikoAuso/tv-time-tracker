@@ -137,7 +137,7 @@ new #[Title('Profilo')] class extends Component {
                 @if ($editingName)
                     <form wire:submit="saveName" class="flex items-center gap-2">
                         <flux:input wire:model="name" class="flex-1" autofocus />
-                        <flux:button type="submit" variant="primary" size="sm">{{ __('Salva') }}</flux:button>
+                        <flux:button type="submit" wire:target="saveName" wire:loading.attr="disabled" variant="primary" size="sm">{{ __('Salva') }}</flux:button>
                     </form>
                     <flux:error name="name" />
                 @else

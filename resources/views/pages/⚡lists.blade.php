@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\UserList;
+use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -29,13 +30,15 @@ new #[Title('Liste')] class extends Component {
             ['newName.required' => __('Dai un nome alla lista.')],
         );
 
-        UserList::firstOrCreate([
+        $list = UserList::firstOrCreate([
             'user_id' => Auth::id(),
             'name' => trim($validated['newName']),
         ]);
 
         $this->reset('newName');
         unset($this->lists);
+
+        Flux::toast(variant: 'success', text: $list->wasRecentlyCreated ? __('Lista creata.') : __('Lista già esistente.'));
     }
 
     public function delete(int $id): void

@@ -216,7 +216,7 @@ new class extends Component {
                 </flux:text>
             @endif
         @else
-            <flux:button wire:click="markWatched" size="sm" icon="check" variant="primary">
+            <flux:button wire:click="markWatched" wire:target="markWatched" wire:loading.attr="disabled" size="sm" icon="check" variant="primary">
                 {{ __('Segna visto') }}
             </flux:button>
         @endif
