@@ -11,11 +11,9 @@ Progetto single-user pensato per uso proprio. Nasce perché **TV Time chiude il 
 
 ## Screenshot
 
-<!-- Aggiungi qui 2-3 screenshot dall'emulatore, es.:
-![Serie da vedere](docs/img/serie-da-vedere.png)
-![Scheda serie](docs/img/scheda-serie.png)
-![Statistiche](docs/img/statistiche.png)
--->
+| Serie da vedere | Scheda serie | Statistiche |
+|---|---|---|
+| ![Serie da vedere](public/img/readme/serie-da-vedere.png) | ![Scheda serie](public/img/readme/scheda-serie.png) | ![Statistiche](public/img/readme/statistiche.png) |
 
 ## Stack
 
