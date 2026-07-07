@@ -80,20 +80,20 @@ new #[Title('Serie da vedere')] class extends Component {
         <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             @foreach ($this->upNext as $episode)
                 <div class="flex flex-col gap-2">
-                    <a href="{{ route('episodes.show', $episode) }}" wire:navigate class="relative block">
-                        @include('partials.poster', ['poster' => $episode->show->poster_path, 'title' => $episode->show->name])
-                        <span class="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
-                            S{{ $episode->season_number }}E{{ $episode->episode_number }}
-                        </span>
-                    </a>
+                    <div class="relative">
+                        <a href="{{ route('episodes.show', $episode) }}" wire:navigate class="block">
+                            @include('partials.poster', ['poster' => $episode->show->poster_path, 'title' => $episode->show->name])
+                            <span class="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+                                S{{ $episode->season_number }}E{{ $episode->episode_number }}
+                            </span>
+                        </a>
+                        <flux:button size="xs" variant="primary" icon="check" class="absolute right-1.5 top-1.5"
+                            wire:click="markWatched({{ $episode->id }})" aria-label="{{ __('Segna visto') }}" />
+                    </div>
                     <div class="min-w-0">
                         <flux:text size="sm" class="truncate font-medium">{{ $episode->show->name }}</flux:text>
                         <flux:text size="sm" class="truncate text-zinc-500">{{ $episode->name ?: __('Episodio') }}</flux:text>
                     </div>
-                    <flux:button size="xs" variant="primary" icon="check" class="w-full"
-                        wire:click="markWatched({{ $episode->id }})">
-                        {{ __('Visto') }}
-                    </flux:button>
                 </div>
             @endforeach
         </div>
