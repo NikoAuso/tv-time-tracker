@@ -6,7 +6,6 @@
 /public/hot
 /public/storage
 /storage/*.key
-/credentials
 /storage/pail
 /vendor
 .env
@@ -26,3 +25,6 @@ yarn-error.log
 /.zed
 
 /worktrees
+
+# Credential files (keystores, private keys, etc.)
+/credentials/

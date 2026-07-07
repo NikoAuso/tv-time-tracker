@@ -161,7 +161,7 @@ return [
         'GITHUB_*',
         'DO_SPACES_*',
         '*_SECRET',
-        'DB_PASSWORD',
+        '*_PASSWORD',
         'DB_USERNAME',
         'TMDB_TOKEN',
     ],
@@ -183,6 +183,7 @@ return [
         'storage/framework/testing',
         'storage/framework/views/*.php',
         'storage/logs/laravel.log',
+        'database/database.sqlite',
     ],
 
     /*
