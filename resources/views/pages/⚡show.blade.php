@@ -436,7 +436,7 @@ new class extends Component {
             @if ($this->totalCount && $this->watchedCount < $this->totalCount)
                 <flux:button size="sm" icon="check" variant="primary"
                     wire:click="markAll"
-                    aria-label="{{ __('Segna tutta la serie come vista') }}">{{ __('Segna tutto') }}</flux:button>
+                    aria-label="{{ __('Segna tutta la serie come vista') }}" />
             @endif
         </div>
 
@@ -459,7 +459,7 @@ new class extends Component {
                     @if ($seen < $episodes->count())
                         <flux:button size="sm" icon="check" variant="primary"
                             wire:click="markSeason({{ $seasonNumber }})"
-                            aria-label="{{ __('Segna stagione come vista') }}">{{ __('Visto') }}</flux:button>
+                            aria-label="{{ __('Segna stagione come vista') }}" />
                     @endif
                 </div>
 
