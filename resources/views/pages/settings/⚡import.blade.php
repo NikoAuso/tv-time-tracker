@@ -164,8 +164,11 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                     <div class="flex flex-col gap-1">
                         <flux:heading size="sm">{{ __('Importa export GDPR') }}</flux:heading>
                         <flux:text size="sm" class="text-zinc-500">
-                            {{ __('Carica il .zip dell\'export GDPR: importa serie, episodi visti e film. Con un token TMDB attivo, poster e trame vengono sincronizzati subito dopo.') }}
+                            {{ __('Dalla pagina GDPR di TV Time accedi e attendi che prepari il file (qualche minuto), poi carica qui lo .zip: importa serie, episodi visti e film. Con un token TMDB attivo, poster e trame si sincronizzano subito dopo.') }}
                         </flux:text>
+                        <flux:link href="https://gdpr.tvtime.com/gdpr/self-service" target="_blank" class="text-sm font-medium">
+                            {{ __('Scarica i tuoi dati da TV Time (GDPR) →') }}
+                        </flux:link>
                     </div>
                 </div>
 
@@ -193,8 +196,11 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                     <div class="flex flex-col gap-1">
                         <flux:heading size="sm">{{ __('Importa da estensione browser') }}</flux:heading>
                         <flux:text size="sm" class="text-zinc-500">
-                            {{ __('Carica lo .zip esportato dall\'estensione: serie e film in JSON, con matching TMDB preciso tramite gli id esterni (imdb/tvdb).') }}
+                            {{ __('Installa l\'estensione «TV Time Out», aprila mentre sei connesso a TV Time nel browser ed esporta in formato ZIP (JSON). Poi carica qui lo .zip: match TMDB preciso tramite gli id esterni (imdb/tvdb).') }}
                         </flux:text>
+                        <flux:link href="https://chromewebstore.google.com/detail/tv-time-out-by-refract/pmejpdpjbkjklfceogdkolmgclldogbi" target="_blank" class="text-sm font-medium">
+                            {{ __('Installa «TV Time Out» (Chrome) →') }}
+                        </flux:link>
                     </div>
                 </div>
 
