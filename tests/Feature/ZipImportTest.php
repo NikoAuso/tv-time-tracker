@@ -37,8 +37,7 @@ it('imports shows and watches from a tv time zip', function () {
     $user = User::factory()->withoutTmdbToken()->create();
 
     Livewire::actingAs($user)->test('pages::settings.import')
-        ->set('archive', exportZip(['tracking-prod-records-v2.csv' => recordsCsv()]))
-        ->call('import')
+        ->call('import', 'export.zip', base64_encode(exportZip(['tracking-prod-records-v2.csv' => recordsCsv()])->getContent()))
         ->assertHasNoErrors();
 
     $show = Show::where('tvdb_id', 1234)->first();
@@ -54,8 +53,7 @@ it('runs the tmdb sync after import when a token is configured', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)->test('pages::settings.import')
-        ->set('archive', exportZip(['tracking-prod-records-v2.csv' => recordsCsv()]))
-        ->call('import')
+        ->call('import', 'export.zip', base64_encode(exportZip(['tracking-prod-records-v2.csv' => recordsCsv()])->getContent()))
         ->assertHasNoErrors();
 
     Http::assertSent(fn ($request) => str_contains($request->url(), 'themoviedb.org'));
@@ -81,8 +79,7 @@ it('syncs using the per-user token when no config token is set', function () {
     $user->save();
 
     Livewire::actingAs($user)->test('pages::settings.import')
-        ->set('archive', exportZip(['tracking-prod-records-v2.csv' => recordsCsv()]))
-        ->call('import')
+        ->call('import', 'export.zip', base64_encode(exportZip(['tracking-prod-records-v2.csv' => recordsCsv()])->getContent()))
         ->assertHasNoErrors();
 
     Http::assertSent(fn ($request) => str_contains($request->url(), 'themoviedb.org'));
@@ -92,8 +89,7 @@ it('rejects a zip without the records file', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)->test('pages::settings.import')
-        ->set('archive', exportZip(['random.csv' => "a,b\n1,2\n"]))
-        ->call('import')
+        ->call('import', 'export.zip', base64_encode(exportZip(['random.csv' => "a,b\n1,2\n"])->getContent()))
         ->assertHasErrors('archive');
 
     expect(Show::count())->toBe(0);

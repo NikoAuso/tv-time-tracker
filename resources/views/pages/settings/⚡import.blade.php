@@ -7,15 +7,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 
+/**
+ * Tutti gli import ricevono il file come base64 (via wire:call dal componente
+ * x-dropzone) invece che come upload-file: il PHP embarcato di NativePHP limita
+ * upload_max_filesize a 2MB, mentre i dati POST sono vincolati dal più ampio
+ * post_max_size (e da payload.max_size di Livewire, alzato in config).
+ */
 new #[Title('Importa / Esporta dati')] class extends Component {
-    use WithFileUploads;
-
-    public $archive;
-
-    public $jsonFile;
-
     public function exportJson()
     {
         $json = (string) json_encode(
@@ -30,57 +29,26 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         );
     }
 
-    public function importJson(): void
+    public function import(string $name, string $data): void
     {
-        $this->validate(['jsonFile' => ['required', 'file', 'max:51200']]);
-
-        $data = json_decode((string) file_get_contents($this->jsonFile->getRealPath()), true);
-
-        if (! is_array($data) || ($data['app'] ?? null) !== UserData::APP) {
-            $this->addError('jsonFile', __('File non valido: non è un backup di TvTimeTracker.'));
+        if (! str_ends_with(strtolower($name), '.zip')) {
+            $this->addError('archive', __('Serve un archivio .zip.'));
 
             return;
         }
 
-        UserData::import((int) Auth::id(), $data);
-
-        $this->reset('jsonFile');
-
-        Flux::toast(variant: 'success', text: __('Dati importati.'));
-    }
-
-    public function import(): void
-    {
-        $this->validate([
-            'archive' => ['required', 'file', 'mimes:zip', 'max:51200'],
-        ]);
-
-        $zip = new \ZipArchive;
-        if ($zip->open($this->archive->getRealPath()) !== true) {
-            $this->addError('archive', __('Impossibile aprire l\'archivio ZIP.'));
+        $bytes = $this->decodeUpload($data);
+        if ($bytes === false) {
+            $this->addError('archive', __('File non valido.'));
 
             return;
         }
 
-        // Estraiamo solo i due CSV che ci servono, per nome: niente zip-slip e
-        // nessun dato personale dell'export scritto su disco.
-        $dir = storage_path('app/tvtime-import-'.Str::uuid());
-        mkdir($dir, 0755, true);
-
-        $hasRecords = false;
-        foreach (['tracking-prod-records-v2.csv', 'tracking-prod-records.csv'] as $name) {
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                if (basename((string) $zip->getNameIndex($i)) === $name) {
-                    file_put_contents($dir.'/'.$name, $zip->getFromIndex($i));
-                    $hasRecords = $hasRecords || $name === 'tracking-prod-records-v2.csv';
-                    break;
-                }
+        $dir = $this->extractZip($bytes, fn (string $e): bool => in_array($e, ['tracking-prod-records-v2.csv', 'tracking-prod-records.csv'], true));
+        if ($dir === null || ! is_file($dir.'/tracking-prod-records-v2.csv')) {
+            if ($dir !== null) {
+                $this->cleanup($dir);
             }
-        }
-        $zip->close();
-
-        if (! $hasRecords) {
-            $this->cleanup($dir);
             $this->addError('archive', __('Archivio non valido: manca tracking-prod-records-v2.csv.'));
 
             return;
@@ -94,9 +62,7 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         }
 
         Artisan::call('import:tvtime', ['path' => $dir, '--user' => (int) Auth::id()]);
-
         $this->cleanup($dir);
-        $this->reset('archive');
 
         if (filled($token)) {
             Artisan::call('shows:sync');
@@ -107,12 +73,6 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         }
     }
 
-    /**
-     * Riceve lo zip dell'estensione come data-URL base64 (via wire:call), non
-     * come upload di file: il PHP embarcato di NativePHP ha upload_max_filesize
-     * a 2 MB e lo zip lo supera, mentre i dati POST sono limitati dal ben più
-     * ampio post_max_size.
-     */
     public function importExtension(string $name, string $data): void
     {
         if (! str_ends_with(strtolower($name), '.zip')) {
@@ -121,40 +81,15 @@ new #[Title('Importa / Esporta dati')] class extends Component {
             return;
         }
 
-        $bytes = base64_decode((string) preg_replace('/^data:[^,]*,/', '', $data), true);
+        $bytes = $this->decodeUpload($data);
         if ($bytes === false) {
             $this->addError('extArchive', __('File non valido.'));
 
             return;
         }
 
-        $tmpZip = storage_path('app/tvtime-ext-'.Str::uuid().'.zip');
-        file_put_contents($tmpZip, $bytes);
-
-        $zip = new \ZipArchive;
-        if ($zip->open($tmpZip) !== true) {
-            @unlink($tmpZip);
-            $this->addError('extArchive', __('Impossibile aprire l\'archivio ZIP.'));
-
-            return;
-        }
-
-        $dir = storage_path('app/tvtime-ext-'.Str::uuid());
-        mkdir($dir, 0755, true);
-
-        $hasJson = false;
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $entry = basename((string) $zip->getNameIndex($i));
-            if (str_ends_with($entry, '.json') && (str_contains($entry, 'series') || str_contains($entry, 'movies'))) {
-                file_put_contents($dir.'/'.$entry, $zip->getFromIndex($i));
-                $hasJson = true;
-            }
-        }
-        $zip->close();
-        @unlink($tmpZip);
-
-        if (! $hasJson) {
-            $this->cleanup($dir);
+        $dir = $this->extractZip($bytes, fn (string $e): bool => str_ends_with($e, '.json') && (str_contains($e, 'series') || str_contains($e, 'movies')));
+        if ($dir === null) {
             $this->addError('extArchive', __('Archivio non valido: mancano i file JSON dell\'estensione (series/movies).'));
 
             return;
@@ -163,10 +98,81 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         config(['services.tmdb.token' => (string) Auth::user()->tmdb_token]);
         Artisan::call('import:tvtime-json', ['path' => $dir, '--user' => (int) Auth::id()]);
         Artisan::call('shows:sync');
-
         $this->cleanup($dir);
 
         Flux::toast(variant: 'success', text: __('Import dall\'estensione completato.'));
+    }
+
+    public function importJson(string $name, string $data): void
+    {
+        if (! str_ends_with(strtolower($name), '.json')) {
+            $this->addError('jsonFile', __('Serve un file .json.'));
+
+            return;
+        }
+
+        $bytes = $this->decodeUpload($data);
+        if ($bytes === false) {
+            $this->addError('jsonFile', __('File non valido.'));
+
+            return;
+        }
+
+        $decoded = json_decode($bytes, true);
+        if (! is_array($decoded) || ($decoded['app'] ?? null) !== UserData::APP) {
+            $this->addError('jsonFile', __('File non valido: non è un backup di TvTimeTracker.'));
+
+            return;
+        }
+
+        UserData::import((int) Auth::id(), $decoded);
+
+        Flux::toast(variant: 'success', text: __('Dati importati.'));
+    }
+
+    private function decodeUpload(string $data): string|false
+    {
+        return base64_decode((string) preg_replace('/^data:[^,]*,/', '', $data), true);
+    }
+
+    /**
+     * Salva i bytes come zip temporaneo ed estrae in una cartella i soli file
+     * per cui $keep(nome) è true. Ritorna la cartella, o null se lo zip è
+     * illeggibile o nessun file corrisponde.
+     */
+    private function extractZip(string $bytes, callable $keep): ?string
+    {
+        $tmpZip = storage_path('app/tvt-'.Str::uuid().'.zip');
+        file_put_contents($tmpZip, $bytes);
+
+        $zip = new \ZipArchive;
+        if ($zip->open($tmpZip) !== true) {
+            @unlink($tmpZip);
+
+            return null;
+        }
+
+        $dir = storage_path('app/tvt-'.Str::uuid());
+        mkdir($dir, 0755, true);
+
+        $extracted = 0;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = basename((string) $zip->getNameIndex($i));
+            if ($keep($entry)) {
+                file_put_contents($dir.'/'.$entry, $zip->getFromIndex($i));
+                $extracted++;
+            }
+        }
+        $zip->close();
+        @unlink($tmpZip);
+
+        if ($extracted === 0) {
+            $this->cleanup($dir);
+
+            return null;
+        }
+
+        return $dir;
     }
 
     private function cleanup(string $dir): void
@@ -195,22 +201,10 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                     </div>
                 </div>
 
-                <form wire:submit="import" class="flex flex-col gap-3">
-                    <x-dropzone model="archive" accept=".zip"
-                        :label="__('Trascina il file .zip qui o clicca per sceglierlo')"
-                        :hint="__('Export GDPR di TV Time')"
-                        :selected="$archive?->getClientOriginalName()" />
-                    <flux:error name="archive" />
-                    <flux:button type="submit" variant="primary" icon="arrow-up-tray"
-                        wire:target="import" wire:loading.attr="disabled" class="self-start">
-                        {{ __('Importa') }}
-                    </flux:button>
-                </form>
-
-                <div wire:loading wire:target="import" class="flex items-center gap-2 text-sm text-zinc-500">
-                    <flux:icon.arrow-path class="size-4 animate-spin" />
-                    {{ __('Importazione e sincronizzazione in corso… può richiedere qualche minuto.') }}
-                </div>
+                <x-dropzone action="import" accept=".zip"
+                    :label="__('Trascina il file .zip qui o clicca per sceglierlo')"
+                    :hint="__('Export GDPR di TV Time')" />
+                <flux:error name="archive" />
             </div>
 
             <div class="flex flex-col gap-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
@@ -227,52 +221,9 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3"
-                    x-data="{
-                        dragging: false,
-                        name: null,
-                        reading: false,
-                        async send(file) {
-                            if (! file) return;
-                            this.name = file.name;
-                            this.reading = true;
-                            try {
-                                const b64 = await new Promise((res, rej) => {
-                                    const r = new FileReader();
-                                    r.onload = () => res(r.result);
-                                    r.onerror = rej;
-                                    r.readAsDataURL(file);
-                                });
-                                await $wire.importExtension(file.name, b64);
-                            } finally {
-                                this.reading = false;
-                                this.name = null;
-                            }
-                        },
-                    }">
-                    <label
-                        x-on:dragover.prevent="dragging = true"
-                        x-on:dragleave.prevent="dragging = false"
-                        x-on:drop.prevent="dragging = false; send($event.dataTransfer.files[0])"
-                        :class="dragging ? 'border-accent bg-accent/10' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600 dark:hover:border-zinc-500'"
-                        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition">
-                        <input type="file" accept=".zip" class="sr-only"
-                            x-on:change="send($event.target.files[0]); $event.target.value = ''" />
-                        <div x-show="! reading" class="flex flex-col items-center gap-2">
-                            <flux:icon.arrow-up-tray class="size-8 text-zinc-400" />
-                            <flux:text class="font-medium">{{ __('Trascina lo .zip dell\'estensione o clicca') }}</flux:text>
-                        </div>
-                        <div x-show="reading" class="flex items-center gap-2 text-sm text-accent">
-                            <flux:icon.arrow-path class="size-5 animate-spin" />
-                            <span x-text="name"></span>
-                        </div>
-                    </label>
-                    <flux:error name="extArchive" />
-                    <div wire:loading wire:target="importExtension" class="flex items-center gap-2 text-sm text-zinc-500">
-                        <flux:icon.arrow-path class="size-4 animate-spin" />
-                        {{ __('Import e sincronizzazione in corso… può richiedere qualche minuto.') }}
-                    </div>
-                </div>
+                <x-dropzone action="importExtension" accept=".zip"
+                    :label="__('Trascina lo .zip dell\'estensione o clicca')" />
+                <flux:error name="extArchive" />
             </div>
 
             <div class="flex flex-col gap-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
@@ -292,15 +243,9 @@ new #[Title('Importa / Esporta dati')] class extends Component {
 
                 <flux:separator variant="subtle" />
 
-                <form wire:submit="importJson" class="flex flex-col gap-3">
-                    <x-dropzone model="jsonFile" accept=".json"
-                        :label="__('Trascina il backup .json qui o clicca')"
-                        :selected="$jsonFile?->getClientOriginalName()" />
-                    <flux:error name="jsonFile" />
-                    <flux:button type="submit" variant="outline" icon="arrow-up-tray" class="self-start">
-                        {{ __('Importa backup') }}
-                    </flux:button>
-                </form>
+                <x-dropzone action="importJson" accept=".json"
+                    :label="__('Trascina il backup .json o clicca')" />
+                <flux:error name="jsonFile" />
             </div>
         </div>
     </x-pages::settings.layout>

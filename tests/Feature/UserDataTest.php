@@ -10,7 +10,6 @@ use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use App\Services\UserData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -129,8 +128,7 @@ it('imports a TvTimeTracker JSON backup from the settings page', function () {
     $target = User::factory()->create();
 
     Livewire::actingAs($target)->test('pages::settings.import')
-        ->set('jsonFile', UploadedFile::fake()->createWithContent('backup.json', $json))
-        ->call('importJson')
+        ->call('importJson', 'backup.json', base64_encode($json))
         ->assertHasNoErrors();
 
     expect(UserShow::where('user_id', $target->id)->count())->toBe(1)
@@ -141,8 +139,7 @@ it('rejects a JSON file that is not a TvTimeTracker backup', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)->test('pages::settings.import')
-        ->set('jsonFile', UploadedFile::fake()->createWithContent('other.json', '{"app":"something-else"}'))
-        ->call('importJson')
+        ->call('importJson', 'other.json', base64_encode('{"app":"something-else"}'))
         ->assertHasErrors('jsonFile');
 
     expect(UserShow::where('user_id', $user->id)->count())->toBe(0);
