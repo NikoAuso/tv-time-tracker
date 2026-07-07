@@ -5,17 +5,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('redirects to the import screen when the user has no TMDB token', function () {
+it('redirects to the token screen when the user has no TMDB token', function () {
     $user = User::factory()->withoutTmdbToken()->create();
 
     $this->actingAs($user)->get(route('dashboard'))
-        ->assertRedirect(route('import.edit'));
+        ->assertRedirect(route('token.edit'));
 });
 
-it('lets the import screen through without a token', function () {
+it('lets the token screen through without a token', function () {
     $user = User::factory()->withoutTmdbToken()->create();
 
-    $this->actingAs($user)->get(route('import.edit'))->assertOk();
+    $this->actingAs($user)->get(route('token.edit'))->assertOk();
 });
 
 it('allows the app and injects the user token when present', function () {

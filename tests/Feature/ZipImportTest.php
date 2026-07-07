@@ -64,7 +64,7 @@ it('runs the tmdb sync after import when a token is configured', function () {
 it('saves a per-user tmdb token', function () {
     $user = User::factory()->create();
 
-    Livewire::actingAs($user)->test('pages::settings.import')
+    Livewire::actingAs($user)->test('pages::settings.token')
         ->set('tmdbToken', 'a-fake-tmdb-read-access-token')
         ->call('saveToken')
         ->assertHasNoErrors();

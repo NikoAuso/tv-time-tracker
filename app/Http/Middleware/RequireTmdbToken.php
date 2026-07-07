@@ -11,9 +11,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * L'app richiede un token TMDB per-utente: senza, ogni pagina reindirizza alla
- * schermata di import dove lo si inserisce. Con il token, lo inietta nella
- * config così i servizi TMDB lo usano per questa richiesta (nessun fallback
- * a un token globale imbarcato).
+ * schermata di setup del token dove lo si inserisce. Con il token, lo inietta
+ * nella config così i servizi TMDB lo usano per questa richiesta (nessun
+ * fallback a un token globale imbarcato).
  */
 class RequireTmdbToken
 {
@@ -22,7 +22,7 @@ class RequireTmdbToken
         $user = Auth::user();
 
         if ($user?->tmdb_token === null) {
-            return redirect()->route('import.edit');
+            return redirect()->route('token.edit');
         }
 
         config(['services.tmdb.token' => $user->tmdb_token]);

@@ -259,6 +259,17 @@ new #[Title('Profilo')] class extends Component {
                     <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
                 </a>
 
+                <a href="{{ route('token.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
+                    <flux:icon.key class="size-5 shrink-0 text-zinc-500" />
+                    <flux:text class="flex-1 font-medium">{{ __('Token TMDB') }}</flux:text>
+                    @if (Auth::user()->hasTmdbToken())
+                        <flux:badge size="sm" color="green">{{ __('Attivo') }}</flux:badge>
+                    @else
+                        <flux:text size="sm" class="text-amber-600 dark:text-amber-400">{{ __('Richiesto') }}</flux:text>
+                    @endif
+                    <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
+                </a>
+
                 <a href="{{ route('import.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
                     <flux:icon.arrow-up-tray class="size-5 shrink-0 text-zinc-500" />
                     <div class="flex min-w-0 flex-1 flex-col">
