@@ -279,14 +279,6 @@ new #[Title('Profilo')] class extends Component {
                     <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
                 </a>
 
-                <a href="{{ route('appearance.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
-                    <flux:icon.swatch class="size-5 shrink-0 text-zinc-500" />
-                    <div class="flex min-w-0 flex-1 flex-col">
-                        <flux:text class="font-medium">{{ __('Aspetto') }}</flux:text>
-                        <flux:text size="sm" class="text-zinc-500">{{ __('Chiaro · Scuro · Sistema') }}</flux:text>
-                    </div>
-                    <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
-                </a>
             </div>
         </div>
     </div>
