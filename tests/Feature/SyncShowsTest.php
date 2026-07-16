@@ -64,3 +64,38 @@ it('fails when the TMDB token is missing', function () {
 
     $this->artisan('shows:sync')->assertFailed();
 });
+
+it('syncs a show already carrying a tmdb_id (e.g. from a JSON backup)', function () {
+    config(['services.tmdb.token' => 'test-token']);
+
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/1408/season/*' => Http::response(['episodes' => [
+            ['id' => 1, 'episode_number' => 1, 'name' => 'Pilot'],
+        ]]),
+        'https://api.themoviedb.org/3/tv/1408*' => Http::response([
+            'id' => 1408, 'name' => 'House', 'overview' => 'A doctor.', 'seasons' => [['season_number' => 1]],
+        ]),
+    ]);
+
+    // Nessun tvdb_id: risolvibile solo tramite il tmdb_id già presente.
+    $show = Show::factory()->create(['tvdb_id' => null, 'tmdb_id' => 1408, 'overview' => null]);
+
+    $this->artisan('shows:sync')->assertSuccessful();
+
+    expect($show->fresh()->overview)->toBe('A doctor.')
+        ->and(Episode::where('show_id', $show->id)->count())->toBe(1);
+});
+
+it('stores an empty overview when TMDB has none, so the show is not re-synced', function () {
+    config(['services.tmdb.token' => 'test-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/1408/season/*' => Http::response(['episodes' => []]),
+        'https://api.themoviedb.org/3/tv/1408*' => Http::response(['id' => 1408, 'name' => 'House', 'seasons' => []]),
+    ]);
+
+    $show = Show::factory()->create(['tvdb_id' => null, 'tmdb_id' => 1408, 'overview' => null]);
+
+    $this->artisan('shows:sync')->assertSuccessful();
+
+    expect($show->fresh()->overview)->toBe('');
+});

@@ -10,6 +10,7 @@ use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use App\Services\UserData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -125,7 +126,8 @@ it('imports a TvTimeTracker JSON backup from the settings page', function () {
     seedLibrary($source);
     $json = (string) json_encode(UserData::export($source->id));
 
-    $target = User::factory()->create();
+    // Utente senza token: isola l'import dei dati dalla sync TMDB (coperta altrove).
+    $target = User::factory()->withoutTmdbToken()->create();
 
     Livewire::actingAs($target)->test('pages::settings.import')
         ->call('importJson', 'backup.json', base64_encode($json))
@@ -133,6 +135,42 @@ it('imports a TvTimeTracker JSON backup from the settings page', function () {
 
     expect(UserShow::where('user_id', $target->id)->count())->toBe(1)
         ->and(WatchedEpisode::where('user_id', $target->id)->count())->toBe(1);
+});
+
+it('syncs episodes from TMDB after a JSON import so "up next" is populated', function () {
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/100/season/*' => Http::response(['episodes' => [
+            ['id' => 11, 'episode_number' => 1, 'name' => 'Pilot', 'air_date' => '2020-01-01', 'runtime' => 45],
+            ['id' => 12, 'episode_number' => 2, 'name' => 'Secondo', 'air_date' => '2020-01-08', 'runtime' => 45],
+        ]]),
+        'https://api.themoviedb.org/3/tv/100*' => Http::response([
+            'id' => 100, 'name' => 'House', 'overview' => 'Un medico scontroso.',
+            'poster_path' => '/h.jpg', 'first_air_date' => '2020-01-01',
+            'number_of_episodes' => 2, 'status' => 'Ended', 'genres' => [],
+            'seasons' => [['season_number' => 1]],
+        ]),
+        '*' => Http::response([]),
+    ]);
+
+    $source = User::factory()->create();
+    seedLibrary($source); // serie tmdb_id=100 con un solo episodio visto (S1E1)
+    $json = (string) json_encode(UserData::export($source->id));
+
+    $target = User::factory()->create();
+
+    Livewire::actingAs($target)->test('pages::settings.import')
+        ->call('importJson', 'backup.json', base64_encode($json))
+        ->assertHasNoErrors();
+
+    // La sync scarica l'intera lista episodi, non solo quello visto dal backup.
+    $show = Show::where('tmdb_id', 100)->firstOrFail();
+    expect(Episode::where('show_id', $show->id)->count())->toBe(2);
+
+    // L'episodio non visto (S1E2) ora compare in "Serie da vedere".
+    $this->actingAs($target)->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('House')
+        ->assertDontSee('Sei in pari');
 });
 
 it('rejects a JSON file that is not a TvTimeTracker backup', function () {
@@ -143,4 +181,46 @@ it('rejects a JSON file that is not a TvTimeTracker backup', function () {
         ->assertHasErrors('jsonFile');
 
     expect(UserShow::where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('wipes all data for the current user only, keeping the shared catalog', function () {
+    $show = Show::factory()->create();
+    $movie = Movie::factory()->create();
+    $episode = Episode::factory()->create(['show_id' => $show->id]);
+
+    $me = User::factory()->create();
+    $other = User::factory()->create();
+
+    foreach ([$me, $other] as $u) {
+        UserShow::factory()->create(['user_id' => $u->id, 'show_id' => $show->id, 'status' => 'following']);
+        UserMovie::factory()->create(['user_id' => $u->id, 'movie_id' => $movie->id]);
+        WatchedEpisode::factory()->create(['user_id' => $u->id, 'episode_id' => $episode->id]);
+        UserList::factory()->create(['user_id' => $u->id, 'name' => 'Preferite']);
+    }
+
+    UserData::wipe($me->id);
+
+    expect(UserShow::where('user_id', $me->id)->count())->toBe(0)
+        ->and(UserMovie::where('user_id', $me->id)->count())->toBe(0)
+        ->and(WatchedEpisode::where('user_id', $me->id)->count())->toBe(0)
+        ->and(UserList::where('user_id', $me->id)->count())->toBe(0)
+        // dati dell'altro utente e catalogo condiviso intatti
+        ->and(UserShow::where('user_id', $other->id)->count())->toBe(1)
+        ->and(WatchedEpisode::where('user_id', $other->id)->count())->toBe(1)
+        ->and(Show::count())->toBe(1)
+        ->and(Movie::count())->toBe(1)
+        ->and(Episode::count())->toBe(1);
+});
+
+it('wipes data from the settings page', function () {
+    $user = User::factory()->create();
+    seedLibrary($user);
+
+    Livewire::actingAs($user)->test('pages::settings.import')
+        ->call('wipeData')
+        ->assertHasNoErrors();
+
+    expect(UserShow::where('user_id', $user->id)->count())->toBe(0)
+        ->and(WatchedEpisode::where('user_id', $user->id)->count())->toBe(0)
+        ->and(UserList::where('user_id', $user->id)->count())->toBe(0);
 });

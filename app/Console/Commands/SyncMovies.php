@@ -24,7 +24,9 @@ class SyncMovies extends Command
 
         $query = Movie::query();
         if (! $this->option('all')) {
-            $query->whereNull('tmdb_id');
+            // Solo i film mai arricchiti: la sync scrive l'overview, quindi la sua
+            // assenza distingue un film nuovo (anche da backup JSON) da uno già fatto.
+            $query->whereNull('overview');
         }
         $movies = $query->get();
 
@@ -58,8 +60,16 @@ class SyncMovies extends Command
      */
     private function syncMovie(Tmdb $tmdb, Movie $movie, array &$counters): void
     {
-        $year = $movie->release_date?->year;
-        $match = $tmdb->searchMovie($movie->title, $year);
+        if ($movie->tmdb_id) {
+            // tmdb_id già noto (es. da backup JSON): dettaglio diretto, senza ri-match per titolo.
+            $detail = $tmdb->getMovie((int) $movie->tmdb_id);
+            $match = $detail;
+        } else {
+            $year = $movie->release_date?->year;
+            $match = $tmdb->searchMovie($movie->title, $year);
+            // La ricerca non include i generi: serve il dettaglio del film.
+            $detail = isset($match['id']) ? $tmdb->getMovie((int) $match['id']) : null;
+        }
 
         if (! $match) {
             $counters['unresolved']++;
@@ -67,14 +77,12 @@ class SyncMovies extends Command
             return;
         }
 
-        // La ricerca non include i generi: serve il dettaglio del film.
-        $detail = isset($match['id']) ? $tmdb->getMovie((int) $match['id']) : null;
-
         $movie->fill([
-            'tmdb_id' => $match['id'] ?? null,
+            'tmdb_id' => $match['id'] ?? $movie->tmdb_id,
             'title' => $match['title'] ?? $movie->title,
             'poster_path' => $match['poster_path'] ?? $movie->poster_path,
-            'overview' => ($match['overview'] ?? '') ?: ($detail['overview'] ?? $movie->overview),
+            // Fallback a '' se TMDB non ha trama: evita di riselezionare il film a ogni run.
+            'overview' => (($match['overview'] ?? '') ?: ($detail['overview'] ?? $movie->overview)) ?? '',
             'release_date' => ($match['release_date'] ?? '') ?: $movie->release_date,
             'runtime' => $detail['runtime'] ?? $movie->runtime,
             'genres' => $detail ? array_column($detail['genres'] ?? [], 'name') : $movie->genres,

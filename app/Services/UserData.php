@@ -169,6 +169,21 @@ class UserData
     }
 
     /**
+     * Cancella tutti i dati dell'utente (serie, film, episodi visti, liste), per
+     * ripartire da un ambiente pulito. Il catalogo condiviso (Show/Movie/Episode)
+     * resta: non è per-utente e viene ripopolato/arricchito al prossimo import.
+     */
+    public static function wipe(int $userId): void
+    {
+        DB::transaction(function () use ($userId) {
+            WatchedEpisode::where('user_id', $userId)->delete();
+            UserShow::where('user_id', $userId)->delete();
+            UserMovie::where('user_id', $userId)->delete();
+            UserList::where('user_id', $userId)->delete(); // list_items via cascadeOnDelete
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $s
      */
     private static function resolveShow(array $s): Show

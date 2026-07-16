@@ -72,3 +72,36 @@ it('fails without a TMDB token', function () {
 
     $this->artisan('movies:sync')->assertFailed();
 });
+
+it('enriches an imported movie by its tmdb_id without re-matching by title', function () {
+    config(['services.tmdb.token' => 'test-token']);
+
+    Http::fake([
+        'https://api.themoviedb.org/3/movie/16869*' => Http::response([
+            'id' => 16869, 'title' => 'Fury', 'poster_path' => '/fury.jpg',
+            'overview' => 'A tank crew in WWII.', 'release_date' => '2014-10-17',
+            'runtime' => 134, 'genres' => [['id' => 18, 'name' => 'Dramma']],
+        ]),
+        'https://api.themoviedb.org/3/search/movie*' => Http::response(['results' => []]),
+    ]);
+
+    // Film da backup JSON: ha già tmdb_id ma nessuna trama.
+    $movie = Movie::factory()->create(['tmdb_id' => 16869, 'title' => 'Fury', 'overview' => null]);
+
+    $this->artisan('movies:sync')->assertSuccessful();
+
+    expect($movie->fresh()->overview)->toBe('A tank crew in WWII.')
+        ->and($movie->fresh()->genres)->toBe(['Dramma']);
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), '/search/movie'));
+});
+
+it('stores an empty overview when TMDB has none, so the movie is not re-synced', function () {
+    config(['services.tmdb.token' => 'test-token']);
+    Http::fake(['https://api.themoviedb.org/3/movie/500*' => Http::response(['id' => 500, 'title' => 'Obscure', 'genres' => []])]);
+
+    $movie = Movie::factory()->create(['tmdb_id' => 500, 'title' => 'Obscure', 'overview' => null]);
+
+    $this->artisan('movies:sync')->assertSuccessful();
+
+    expect($movie->fresh()->overview)->toBe('');
+});

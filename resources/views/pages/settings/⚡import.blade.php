@@ -127,7 +127,24 @@ new #[Title('Importa / Esporta dati')] class extends Component {
 
         UserData::import((int) Auth::id(), $decoded);
 
-        Flux::toast(variant: 'success', text: __('Dati importati.'));
+        // Come per gli altri import: con token, sincronizza da TMDB (poster, trame
+        // e soprattutto l'elenco episodi, che il backup non contiene).
+        $token = (string) Auth::user()->tmdb_token;
+        if (filled($token)) {
+            config(['services.tmdb.token' => $token]);
+            Artisan::call('shows:sync');
+            Artisan::call('movies:sync');
+            Flux::toast(text: __('Dati importati e sincronizzati con TMDB.'), variant: 'success');
+        } else {
+            Flux::toast(text: __('Dati importati. Imposta un token TMDB per poster, trame ed episodi.'), variant: 'success');
+        }
+    }
+
+    public function wipeData(): void
+    {
+        UserData::wipe((int) Auth::id());
+
+        Flux::toast(variant: 'success', text: __('Tutti i tuoi dati sono stati eliminati.'));
     }
 
     private function decodeUpload(string $data): string|false
@@ -246,6 +263,13 @@ new #[Title('Importa / Esporta dati')] class extends Component {
                 <x-dropzone action="importJson" accept=".json"
                     :label="__('Trascina il backup .json o clicca')" />
                 <flux:error name="jsonFile" />
+
+                <flux:separator variant="subtle" />
+
+                <flux:button wire:click="wipeData" variant="danger" icon="trash" class="self-start"
+                    wire:confirm="{{ __('Eliminare TUTTI i tuoi dati (serie, film, episodi visti e liste)? L\'operazione è irreversibile.') }}">
+                    {{ __('Elimina tutti i dati') }}
+                </flux:button>
             </div>
         </div>
     </x-pages::settings.layout>

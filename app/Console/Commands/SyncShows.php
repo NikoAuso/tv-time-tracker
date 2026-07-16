@@ -23,9 +23,13 @@ class SyncShows extends Command
             return self::FAILURE;
         }
 
-        $query = Show::query()->whereNotNull('tvdb_id');
+        // Show con un id risolvibile su TMDB: da TV Time (tvdb_id, da risolvere) o
+        // da backup JSON dell'app (tmdb_id già presente, ma senza elenco episodi).
+        $query = Show::query()->where(fn ($q) => $q->whereNotNull('tvdb_id')->orWhereNotNull('tmdb_id'));
         if (! $this->option('all')) {
-            $query->whereNull('tmdb_id');
+            // Solo quelli mai arricchiti: l'overview lo scrive la sync, quindi la
+            // sua assenza distingue uno show nuovo da uno già sincronizzato.
+            $query->whereNull('overview');
         }
         $shows = $query->get();
 
@@ -79,7 +83,8 @@ class SyncShows extends Command
         $show->fill([
             'name' => $data['name'] ?? $show->name,
             'poster_path' => $data['poster_path'] ?? $show->poster_path,
-            'overview' => $data['overview'] ?? $show->overview,
+            // Fallback a '' se TMDB non ha trama: evita di riselezionare lo show a ogni run.
+            'overview' => $data['overview'] ?? $show->overview ?? '',
             'first_air_date' => ($data['first_air_date'] ?? '') ?: null,
             'total_episodes' => $data['number_of_episodes'] ?? null,
             'status' => $data['status'] ?? null,
