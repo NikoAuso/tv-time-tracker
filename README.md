@@ -26,7 +26,7 @@ Progetto single-user pensato per uso proprio. Nasce perché **TV Time chiude il 
 
 ## Funzionalità
 
-- **Serie da vedere**: primo episodio non visto per ogni serie seguita, in vista lista o griglia
+- **Serie da vedere**: primo episodio non visto per ogni serie seguita; viste lista, griglia o **calendario** (episodi in arrivo delle serie seguite, raggruppati per data)
 - **Libreria** unificata di serie e film con ricerca e filtri; le serie sono raggruppate in *Da iniziare / In corso / Concluse*
 - **Ricerca** su tutto il catalogo TMDB (serie e film), in vista lista o griglia
 - Segna visto per **episodio**, per **stagione**, "fino a qui" o l'intera serie
