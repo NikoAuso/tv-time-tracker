@@ -17,8 +17,13 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        // Username demo condiviso fra i progetti (fallback se il file non esiste).
+        // Qui l'auth e a profilo + pin: email/password non esistono in questo progetto.
+        $demo = @include dirname(base_path()).'/demo-credentials.php';
+        $demo = is_array($demo) ? $demo : [];
+
         User::factory()->create([
-            'name' => 'Test User',
+            'name' => $demo['username'] ?? 'Test User',
         ]);
     }
 }
