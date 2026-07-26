@@ -11,6 +11,14 @@ use Livewire\Component;
 new #[Title('Serie da vedere')] class extends Component {
     public string $view = 'list';
 
+    /** @return \Illuminate\Support\Collection<int, int> */
+    private function followedShowIds()
+    {
+        return UserShow::where('user_id', Auth::id())
+            ->where('status', 'following')
+            ->pluck('show_id');
+    }
+
     /**
      * Primo episodio non visto (già uscito) per ogni serie seguita.
      *
@@ -21,15 +29,11 @@ new #[Title('Serie da vedere')] class extends Component {
     {
         $userId = Auth::id();
 
-        $showIds = UserShow::where('user_id', $userId)
-            ->where('status', 'following')
-            ->pluck('show_id');
-
         // NOT EXISTS invece di whereNotIn(watchedIds): evita di caricare e bindare
         // migliaia di id (oltre il limite di variabili di SQLite) a ogni render.
         return Episode::query()
             ->with('show')
-            ->whereIn('show_id', $showIds)
+            ->whereIn('show_id', $this->followedShowIds())
             ->where('season_number', '>=', 1)
             ->whereDoesntHave('watches', fn ($q) => $q->where('user_id', $userId))
             ->where(fn ($q) => $q->whereNull('air_date')->orWhereDate('air_date', '<=', now()))
@@ -41,6 +45,27 @@ new #[Title('Serie da vedere')] class extends Component {
             ->map->first()
             ->sortBy(fn (Episode $e) => $e->show->name)
             ->values();
+    }
+
+    /**
+     * Prossime uscite: episodi futuri delle serie seguite, raggruppati per data.
+     *
+     * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, Episode>>
+     */
+    #[Computed]
+    public function upcoming()
+    {
+        return Episode::query()
+            ->with('show')
+            ->whereIn('show_id', $this->followedShowIds())
+            ->whereDate('air_date', '>=', today())
+            ->orderBy('air_date')
+            ->orderBy('show_id')
+            ->orderBy('season_number')
+            ->orderBy('episode_number')
+            ->limit(200)
+            ->get()
+            ->groupBy(fn (Episode $e) => $e->air_date->toDateString());
     }
 
     public function markWatched(int $episodeId): void
@@ -55,22 +80,62 @@ new #[Title('Serie da vedere')] class extends Component {
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <div class="flex items-end justify-between gap-4">
-        <flux:heading size="xl">{{ __('Serie da vedere') }}</flux:heading>
-        <div class="flex items-center gap-3">
-            <flux:text class="whitespace-nowrap text-zinc-500">{{ $this->upNext->count() }} {{ __('serie in corso') }}</flux:text>
-            @unless ($this->upNext->isEmpty())
-                <div class="flex gap-1">
-                    <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
-                        :variant="$view === 'list' ? 'primary' : 'outline'" aria-label="{{ __('Lista') }}" />
-                    <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
-                        :variant="$view === 'grid' ? 'primary' : 'outline'" aria-label="{{ __('Griglia') }}" />
-                </div>
-            @endunless
+    <div class="flex items-start justify-between gap-4">
+        <div class="flex min-w-0 flex-col gap-0.5">
+            <flux:heading size="xl">{{ $view === 'calendar' ? __('Episodi in arrivo') : __('Serie da vedere') }}</flux:heading>
+            <flux:text size="sm" class="text-zinc-500">
+                @if ($view === 'calendar')
+                    {{ $this->upcoming->collapse()->count() }} {{ __('in programma') }}
+                @else
+                    {{ $this->upNext->count() }} {{ __('serie in corso') }}
+                @endif
+            </flux:text>
         </div>
+        @if (! $this->upNext->isEmpty() || ! $this->upcoming->isEmpty())
+            <div class="flex shrink-0 gap-1">
+                <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
+                    :variant="$view === 'list' ? 'primary' : 'outline'" aria-label="{{ __('Lista') }}" />
+                <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
+                    :variant="$view === 'grid' ? 'primary' : 'outline'" aria-label="{{ __('Griglia') }}" />
+                <flux:button size="sm" icon="calendar-days" wire:click="$set('view', 'calendar')"
+                    :variant="$view === 'calendar' ? 'primary' : 'outline'" aria-label="{{ __('Calendario') }}" />
+            </div>
+        @endif
     </div>
 
-    @if ($this->upNext->isEmpty())
+    @if ($view === 'calendar')
+        @if ($this->upcoming->isEmpty())
+            <div class="flex flex-col items-center gap-2 py-16 text-center">
+                <flux:icon.calendar-days class="size-10 text-zinc-400" />
+                <flux:heading size="lg">{{ __('Nessuna uscita in programma') }}</flux:heading>
+                <flux:text class="text-zinc-500">{{ __('Non ci sono episodi futuri nelle serie che segui.') }}</flux:text>
+            </div>
+        @else
+            <div class="flex flex-col gap-6">
+                @foreach ($this->upcoming as $episodes)
+                    <div class="flex flex-col gap-3">
+                        <flux:heading size="sm" class="text-zinc-500">
+                            {{ \Illuminate\Support\Str::ucfirst($episodes->first()->air_date->locale('it')->isoFormat('dddd D MMMM')) }}
+                        </flux:heading>
+                        <div class="flex flex-col gap-2">
+                            @foreach ($episodes as $episode)
+                                <a href="{{ route('episodes.show', $episode) }}" wire:navigate
+                                    class="flex items-center gap-3 rounded-xl border border-zinc-200 p-3 no-underline transition hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
+                                    @include('partials.poster', ['poster' => $episode->show->poster_path, 'title' => $episode->show->name, 'ratio' => 'h-24 w-16 shrink-0', 'size' => 'w185'])
+                                    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <flux:heading size="sm" class="truncate">{{ $episode->show->name }}</flux:heading>
+                                        <flux:text size="sm" class="tabular-nums text-zinc-500">
+                                            S{{ $episode->season_number }}E{{ $episode->episode_number }}{{ $episode->name ? ' · '.$episode->name : '' }}
+                                        </flux:text>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    @elseif ($this->upNext->isEmpty())
         <div class="flex flex-col items-center gap-2 py-16 text-center">
             <flux:icon.check-badge class="size-10 text-green-500" />
             <flux:heading size="lg">{{ __('Sei in pari!') }}</flux:heading>
@@ -107,7 +172,7 @@ new #[Title('Serie da vedere')] class extends Component {
             @foreach ($this->upNext as $episode)
                 <div class="flex gap-3 rounded-xl border border-zinc-200 p-3 transition hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
                     <a href="{{ route('episodes.show', $episode) }}" wire:navigate class="flex min-w-0 flex-1 gap-3">
-                        @include('partials.poster', ['poster' => $episode->show->poster_path, 'title' => $episode->show->name, 'ratio' => 'h-28 w-20 shrink-0', 'size' => 'w185'])
+                        @include('partials.poster', ['poster' => $episode->show->poster_path, 'title' => $episode->show->name, 'ratio' => 'h-24 w-16 shrink-0', 'size' => 'w185'])
                         <div class="flex min-w-0 flex-1 flex-col gap-1">
                             <flux:heading size="sm" class="truncate">{{ $episode->show->name }}</flux:heading>
                             <flux:text size="sm" class="tabular-nums text-zinc-500">
