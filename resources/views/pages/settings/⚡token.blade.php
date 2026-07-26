@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Tmdb;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Title;
@@ -11,9 +12,16 @@ new #[Title('Token TMDB')] class extends Component {
     public function saveToken(): void
     {
         $validated = $this->validate(['tmdbToken' => ['required', 'string', 'min:20']]);
+        $token = trim($validated['tmdbToken']);
+
+        if (! (new Tmdb($token))->valid()) {
+            $this->addError('tmdbToken', __('Token non valido: assicurati di aver copiato il "API Read Access Token" (v4) da TMDB.'));
+
+            return;
+        }
 
         $user = Auth::user();
-        $user->tmdb_token = trim($validated['tmdbToken']);
+        $user->tmdb_token = $token;
         $user->save();
 
         $this->reset('tmdbToken');

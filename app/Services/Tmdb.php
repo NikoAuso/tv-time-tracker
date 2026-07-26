@@ -24,6 +24,16 @@ class Tmdb
             ->retry(2, 200);
     }
 
+    /** True se il token è accettato da TMDB (200 su /authentication; 401/errore/offline = non valido). */
+    public function valid(): bool
+    {
+        try {
+            return $this->client()->get('/authentication')->successful();
+        } catch (\Throwable) {
+            return false;  // client() ha retry con throw: 401 o connessione ko -> non valido
+        }
+    }
+
     /**
      * Risolve un ID TheTVDB nel corrispondente record serie TMDB.
      *
