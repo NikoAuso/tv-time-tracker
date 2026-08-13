@@ -8,6 +8,7 @@
 /storage/*.key
 /storage/pail
 /vendor
+/nativephp
 .env
 .env.backup
 .env.production

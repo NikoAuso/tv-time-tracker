@@ -25,6 +25,8 @@ class BundleSeeder
         'user_shows',
         'user_movies',
         'watched_episodes',
+        'user_lists',
+        'list_items',
     ];
 
     /**
