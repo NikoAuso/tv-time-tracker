@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\BundleSeeder;
 use App\Services\UserData;
 use Flux\Flux;
 use Illuminate\Support\Facades\Artisan;
@@ -7,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Native\Mobile\Facades\Share;
 
 /**
  * Tutti gli import ricevono il file come base64 (via wire:call dal componente
@@ -14,7 +16,8 @@ use Livewire\Component;
  * upload_max_filesize a 2MB, mentre i dati POST sono vincolati dal più ampio
  * post_max_size (e da payload.max_size di Livewire, alzato in config).
  */
-new #[Title('Importa / Esporta dati')] class extends Component {
+new #[Title('Importa / Esporta dati')] class extends Component
+{
     public function exportJson()
     {
         $json = (string) json_encode(
@@ -22,9 +25,22 @@ new #[Title('Importa / Esporta dati')] class extends Component {
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
+        $filename = 'tv-time-tracker-'.now()->format('Y-m-d').'.json';
+
+        // Nella WebView Android non esiste un download manager: lo streamDownload
+        // di Livewire non salva nulla on-device. Scrivo il file e apro lo share
+        // sheet nativo; in browser/desktop resta il download classico.
+        if (BundleSeeder::runningOnDevice()) {
+            $path = storage_path('app/'.$filename);
+            file_put_contents($path, $json);
+            Share::file(__('Backup TvTimeTracker'), $filename, $path);
+
+            return;
+        }
+
         return response()->streamDownload(
             fn () => print ($json),
-            'tv-time-tracker-'.now()->format('Y-m-d').'.json',
+            $filename,
             ['Content-Type' => 'application/json'],
         );
     }
@@ -162,7 +178,7 @@ new #[Title('Importa / Esporta dati')] class extends Component {
         $tmpZip = storage_path('app/tvt-'.Str::uuid().'.zip');
         file_put_contents($tmpZip, $bytes);
 
-        $zip = new \ZipArchive;
+        $zip = new ZipArchive;
         if ($zip->open($tmpZip) !== true) {
             @unlink($tmpZip);
 

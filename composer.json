@@ -13,6 +13,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
+        "ext-zip": "*",
         "laravel/chisel": "^0.1.1",
         "laravel/framework": "^13.22",
         "laravel/tinker": "^3.0.2",
@@ -20,7 +21,7 @@
         "livewire/flux": "^2.15.0",
         "livewire/livewire": "^4.3.3",
         "nativephp/mobile": "^3.3.6",
-        "ext-zip": "*"
+        "nativephp/mobile-share": "^1.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24.1",
