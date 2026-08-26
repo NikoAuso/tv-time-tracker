@@ -21,9 +21,10 @@ class DatabaseSeeder extends Seeder
         // Qui l'auth e a profilo + pin: email/password non esistono in questo progetto.
         $demo = @include dirname(base_path()).'/demo-credentials.php';
         $demo = is_array($demo) ? $demo : [];
+        $admin = $demo['super_admin'] ?? [];
 
         User::factory()->create([
-            'name' => $demo['username'] ?? 'Test User',
+            'name' => $admin['username'] ?? 'Test User',
         ]);
     }
 }
