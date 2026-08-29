@@ -23,10 +23,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $overview
  * @property int|null $runtime
  * @property array<int, string>|null $genres
+ * @property array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}|null $providers
+ * @property Carbon|null $providers_synced_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['tmdb_id', 'tvtime_uuid', 'imdb_id', 'title', 'release_date', 'poster_path', 'overview', 'runtime', 'genres'])]
+#[Fillable(['tmdb_id', 'tvtime_uuid', 'imdb_id', 'title', 'release_date', 'poster_path', 'overview', 'runtime', 'genres', 'providers', 'providers_synced_at'])]
 class Movie extends Model
 {
     /** @use HasFactory<MovieFactory> */
@@ -52,6 +54,8 @@ class Movie extends Model
         return [
             'release_date' => 'date',
             'genres' => 'array',
+            'providers' => 'array',
+            'providers_synced_at' => 'datetime',
         ];
     }
 }

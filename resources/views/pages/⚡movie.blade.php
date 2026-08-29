@@ -4,6 +4,7 @@ use App\Models\Movie;
 use App\Models\UserList;
 use App\Models\UserMovie;
 use App\Services\Tmdb;
+use App\Services\WatchProviders;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
@@ -33,19 +34,7 @@ new class extends Component {
     #[Computed]
     public function providers(): array
     {
-        if (! $this->movie->tmdb_id) {
-            return ['link' => null, 'flatrate' => []];
-        }
-
-        return Cache::remember(
-            "movie:{$this->movie->tmdb_id}:providers",
-            now()->addHours(12),
-            fn (): array => rescue(
-                fn () => app(Tmdb::class)->movieProviders($this->movie->tmdb_id),
-                ['link' => null, 'flatrate' => []],
-                report: false,
-            ),
-        );
+        return app(WatchProviders::class)->forMovie($this->movie);
     }
 
     #[Computed]

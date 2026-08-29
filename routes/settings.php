@@ -12,5 +12,6 @@ Route::middleware(['pin'])->group(function () {
         Route::livewire('settings/profile', 'pages::settings.profile')->name('profile.edit');
         Route::livewire('settings/pin', 'pages::settings.pin')->name('pin.edit');
         Route::livewire('settings/import', 'pages::settings.import')->name('import.edit');
+        Route::livewire('settings/resync', 'pages::settings.resync')->name('resync.edit');
     });
 });

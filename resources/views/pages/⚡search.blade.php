@@ -154,6 +154,25 @@ new #[Title('Cerca')] class extends Component {
             text: $added ? __('Aggiunto a «Da vedere».') : __('Impossibile aggiungere: riprova.'),
         );
     }
+
+    public function remove(int $tmdbId, ?string $type = null): void
+    {
+        if (($type ?? $this->type) === 'movies') {
+            $id = Movie::where('tmdb_id', $tmdbId)->value('id');
+            if ($id !== null) {
+                UserMovie::where('user_id', Auth::id())->where('movie_id', $id)->delete();
+            }
+        } else {
+            $id = Show::where('tmdb_id', $tmdbId)->value('id');
+            if ($id !== null) {
+                UserShow::where('user_id', Auth::id())->where('show_id', $id)->delete();
+            }
+        }
+
+        unset($this->results, $this->trendingShows, $this->trendingMovies);
+
+        Flux::toast(variant: 'success', text: __('Rimosso dai seguiti.'));
+    }
 }; ?>
 
 <div class="flex flex-col gap-6">
@@ -200,7 +219,7 @@ new #[Title('Cerca')] class extends Component {
             @else
                 <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                     @foreach ($results as $item)
-                        <div class="flex items-center gap-3 py-3">
+                        <div class="flex items-center gap-3 py-3" wire:key="sr-{{ $type }}-{{ $item['tmdb_id'] }}">
                             <button type="button" wire:click="open({{ $item['tmdb_id'] }}, '{{ $type }}')"
                                 class="flex min-w-0 flex-1 items-center gap-3 text-start">
                                 <div class="relative h-[84px] w-14 shrink-0">

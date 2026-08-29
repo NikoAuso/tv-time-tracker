@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Movie;
+use App\Models\Show;
 use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Services\SeriesProgress;
@@ -18,12 +20,62 @@ new #[Title('Libreria')] class extends Component
 
     public string $status = 'in_progress';
 
+    /** @var list<string> */
+    public array $platformFilter = [];
+
     public function updatedType(): void
     {
-        // "In corso" esiste solo per le serie: passando ai Film ripiego su "Visti".
-        if ($this->type === 'movies' && $this->status === 'in_progress') {
-            $this->status = 'done';
+        // Aprendo i Film si parte sempre da "Da vedere" (watchlist).
+        if ($this->type === 'movies') {
+            $this->status = 'watchlist';
         }
+    }
+
+    public function removePlatform(string $name): void
+    {
+        $this->platformFilter = array_values(array_filter($this->platformFilter, fn (string $p): bool => $p !== $name));
+    }
+
+    /**
+     * Piattaforme presenti nella libreria dell'utente (serie + film), per il filtro.
+     *
+     * @return array<string, string|null>  name => logo_path
+     */
+    #[Computed]
+    public function platforms(): array
+    {
+        $userId = Auth::id();
+        $out = [];
+
+        $collect = function ($models) use (&$out): void {
+            foreach ($models as $model) {
+                foreach ($model->providers['flatrate'] ?? [] as $p) {
+                    $out[$p['name']] ??= $p['logo_path'] ?? null;
+                }
+            }
+        };
+
+        $collect(Show::whereIn('id', UserShow::where('user_id', $userId)->select('show_id'))->whereNotNull('providers')->get(['id', 'providers']));
+        $collect(Movie::whereIn('id', UserMovie::where('user_id', $userId)->select('movie_id'))->whereNotNull('providers')->get(['id', 'providers']));
+
+        uksort($out, fn (string $a, string $b): int => strnatcasecmp($a, $b));
+
+        return $out;
+    }
+
+    private function matchesPlatform(Show|Movie $model): bool
+    {
+        if ($this->platformFilter === []) {
+            return true;
+        }
+
+        foreach ($model->providers['flatrate'] ?? [] as $p) {
+            if (in_array($p['name'], $this->platformFilter, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -90,6 +142,7 @@ new #[Title('Libreria')] class extends Component
             ->when($this->status === 'done', fn ($q) => $q->whereIn('show_id', $concluded))
             ->when($this->search !== '', fn ($q) => $q->whereHas('show', fn ($s) => $s->where('name', 'like', '%'.$this->search.'%')))
             ->get()
+            ->filter(fn (UserShow $us) => $this->matchesPlatform($us->show))
             ->map(fn (UserShow $us) => [
                 'type' => 'series',
                 'title' => $us->show->name,
@@ -112,6 +165,7 @@ new #[Title('Libreria')] class extends Component
             ->where('status', $movieStatus)
             ->when($this->search !== '', fn ($q) => $q->whereHas('movie', fn ($m) => $m->where('title', 'like', '%'.$this->search.'%')))
             ->get()
+            ->filter(fn (UserMovie $um) => $this->matchesPlatform($um->movie))
             ->map(fn (UserMovie $um) => [
                 'type' => 'movie',
                 'title' => $um->movie->title,
@@ -187,7 +241,15 @@ new #[Title('Libreria')] class extends Component
                 </flux:button>
             @endforeach
         </div>
+
+        @if (! empty($this->platforms))
+            <div class="ms-auto">
+                @include('partials.platform-filter', ['platforms' => $this->platforms])
+            </div>
+        @endif
     </div>
+
+    @include('partials.platform-badges')
 
     @if ($this->items->isEmpty())
         <div class="flex flex-col items-center gap-2 py-16 text-center">

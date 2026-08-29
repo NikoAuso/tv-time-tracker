@@ -23,10 +23,12 @@ use Illuminate\Support\Carbon;
  * @property int|null $total_episodes
  * @property string|null $status
  * @property array<int, string>|null $genres
+ * @property array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}|null $providers
+ * @property Carbon|null $providers_synced_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['tmdb_id', 'tvdb_id', 'name', 'poster_path', 'overview', 'first_air_date', 'total_episodes', 'status', 'genres'])]
+#[Fillable(['tmdb_id', 'tvdb_id', 'name', 'poster_path', 'overview', 'first_air_date', 'total_episodes', 'status', 'genres', 'providers', 'providers_synced_at'])]
 class Show extends Model
 {
     /** @use HasFactory<ShowFactory> */
@@ -52,6 +54,8 @@ class Show extends Model
         return [
             'first_air_date' => 'date',
             'genres' => 'array',
+            'providers' => 'array',
+            'providers_synced_at' => 'datetime',
         ];
     }
 }

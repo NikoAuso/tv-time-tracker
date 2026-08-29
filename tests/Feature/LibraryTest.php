@@ -40,8 +40,24 @@ it('filters the library by type', function () {
         ->assertSee('House')
         ->assertDontSee('Fury')
         ->set('type', 'movies')
+        ->set('status', 'done')
         ->assertSee('Fury')
         ->assertDontSee('House');
+});
+
+it('defaults the movies tab to "Da vedere"', function () {
+    $user = User::factory()->create();
+    $watched = Movie::factory()->create(['title' => 'Fury']);
+    $planned = Movie::factory()->create(['title' => 'Dune']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $watched->id, 'status' => 'watched']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $planned->id, 'status' => 'watchlist']);
+
+    Livewire::actingAs($user)->test('pages::library')
+        ->set('status', 'done')
+        ->set('type', 'movies')
+        ->assertSet('status', 'watchlist')
+        ->assertSee('Dune')
+        ->assertDontSee('Fury');
 });
 
 it('separates watched movies from the watchlist', function () {
@@ -59,6 +75,22 @@ it('separates watched movies from the watchlist', function () {
         ->set('status', 'watchlist')
         ->assertSee('Dune')
         ->assertDontSee('Fury');
+});
+
+it('filters the library by streaming platform', function () {
+    $user = User::factory()->create();
+    $netflix = Movie::factory()->create(['title' => 'NetflixMovie', 'providers' => ['link' => null, 'flatrate' => [['name' => 'Netflix', 'logo_path' => null]]]]);
+    $prime = Movie::factory()->create(['title' => 'PrimeMovie', 'providers' => ['link' => null, 'flatrate' => [['name' => 'Prime Video', 'logo_path' => null]]]]);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $netflix->id, 'status' => 'watchlist']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $prime->id, 'status' => 'watchlist']);
+
+    Livewire::actingAs($user)->test('pages::library')
+        ->set('type', 'movies')
+        ->assertSee('NetflixMovie')
+        ->assertSee('PrimeMovie')
+        ->set('platformFilter', ['Netflix'])
+        ->assertSee('NetflixMovie')
+        ->assertDontSee('PrimeMovie');
 });
 
 it('classifies series into da iniziare, in corso and concluse', function () {

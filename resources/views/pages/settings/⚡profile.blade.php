@@ -279,6 +279,15 @@ new #[Title('Profilo')] class extends Component {
                     <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
                 </a>
 
+                <a href="{{ route('resync.edit') }}" wire:navigate class="flex items-center gap-3 p-4 no-underline">
+                    <flux:icon.arrow-path class="size-5 shrink-0 text-zinc-500" />
+                    <div class="flex min-w-0 flex-1 flex-col">
+                        <flux:text class="font-medium">{{ __('Risincronizza da TMDB') }}</flux:text>
+                        <flux:text size="sm" class="text-zinc-500">{{ __('Aggiorna metadati, episodi e piattaforme') }}</flux:text>
+                    </div>
+                    <flux:icon.chevron-right class="size-4 shrink-0 text-zinc-300" />
+                </a>
+
             </div>
         </div>
     </div>

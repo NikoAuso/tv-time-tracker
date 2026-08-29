@@ -67,6 +67,8 @@ class TmdbLibrary
             }
         }
 
+        (new WatchProviders($this->tmdb))->forShow($show);
+
         if ($userId !== null) {
             UserShow::firstOrCreate(['user_id' => $userId, 'show_id' => $show->id], ['status' => 'watchlist']);
         }
@@ -92,6 +94,8 @@ class TmdbLibrary
                 'genres' => array_column($data['genres'] ?? [], 'name'),
             ],
         );
+
+        (new WatchProviders($this->tmdb))->forMovie($movie);
 
         if ($userId !== null) {
             UserMovie::firstOrCreate(['user_id' => $userId, 'movie_id' => $movie->id], ['status' => 'watchlist']);

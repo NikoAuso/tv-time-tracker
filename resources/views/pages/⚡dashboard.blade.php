@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\Episode;
+use App\Models\Movie;
+use App\Models\Show;
+use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use Illuminate\Support\Facades\Auth;
@@ -8,8 +11,13 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Serie da vedere')] class extends Component {
+new #[Title('Da guardare')] class extends Component {
     public string $view = 'list';
+
+    public string $tab = 'series';
+
+    /** @var list<string> */
+    public array $platformFilter = [];
 
     /** @return \Illuminate\Support\Collection<int, int> */
     private function followedShowIds()
@@ -17,6 +25,53 @@ new #[Title('Serie da vedere')] class extends Component {
         return UserShow::where('user_id', Auth::id())
             ->where('status', 'following')
             ->pluck('show_id');
+    }
+
+    public function removePlatform(string $name): void
+    {
+        $this->platformFilter = array_values(array_filter($this->platformFilter, fn (string $p): bool => $p !== $name));
+    }
+
+    private function matchesPlatform(Movie|Show $model): bool
+    {
+        if ($this->platformFilter === []) {
+            return true;
+        }
+
+        foreach ($model->providers['flatrate'] ?? [] as $p) {
+            if (in_array($p['name'], $this->platformFilter, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Piattaforme presenti tra serie seguite e film da vedere, per il filtro.
+     *
+     * @return array<string, string|null>  name => logo_path
+     */
+    #[Computed]
+    public function platforms(): array
+    {
+        $userId = Auth::id();
+        $out = [];
+
+        $collect = function ($models) use (&$out): void {
+            foreach ($models as $model) {
+                foreach ($model->providers['flatrate'] ?? [] as $p) {
+                    $out[$p['name']] ??= $p['logo_path'] ?? null;
+                }
+            }
+        };
+
+        $collect(Show::whereIn('id', $this->followedShowIds())->whereNotNull('providers')->get(['id', 'providers']));
+        $collect(Movie::whereIn('id', UserMovie::where('user_id', $userId)->where('status', 'watchlist')->select('movie_id'))->whereNotNull('providers')->get(['id', 'providers']));
+
+        uksort($out, fn (string $a, string $b): int => strnatcasecmp($a, $b));
+
+        return $out;
     }
 
     /**
@@ -43,6 +98,7 @@ new #[Title('Serie da vedere')] class extends Component {
             ->get()
             ->groupBy('show_id')
             ->map->first()
+            ->filter(fn (Episode $e) => $this->matchesPlatform($e->show))
             ->sortBy(fn (Episode $e) => $e->show->name)
             ->values();
     }
@@ -65,7 +121,39 @@ new #[Title('Serie da vedere')] class extends Component {
             ->orderBy('episode_number')
             ->limit(200)
             ->get()
+            ->filter(fn (Episode $e) => $this->matchesPlatform($e->show))
             ->groupBy(fn (Episode $e) => $e->air_date->toDateString());
+    }
+
+    /**
+     * Film in watchlist ("Da vedere"), filtrati per piattaforma.
+     *
+     * @return \Illuminate\Support\Collection<int, UserMovie>
+     */
+    #[Computed]
+    public function watchlistMovies()
+    {
+        return UserMovie::query()
+            ->with('movie')
+            ->where('user_id', Auth::id())
+            ->where('status', 'watchlist')
+            ->get()
+            ->filter(fn (UserMovie $um) => $this->matchesPlatform($um->movie))
+            ->sortBy(fn (UserMovie $um) => $um->movie->title, SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+    }
+
+    /**
+     * Film in watchlist raggruppati per anno di uscita (vista "calendario").
+     *
+     * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, UserMovie>>
+     */
+    #[Computed]
+    public function moviesByYear()
+    {
+        return $this->watchlistMovies
+            ->groupBy(fn (UserMovie $um) => $um->movie->release_date?->format('Y') ?: '—')
+            ->sortKeysDesc();
     }
 
     public function markWatched(int $episodeId): void
@@ -80,30 +168,97 @@ new #[Title('Serie da vedere')] class extends Component {
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <div class="flex items-start justify-between gap-4">
-        <div class="flex min-w-0 flex-col gap-0.5">
-            <flux:heading size="xl">{{ $view === 'calendar' ? __('Episodi in arrivo') : __('Serie da vedere') }}</flux:heading>
-            <flux:text size="sm" class="text-zinc-500">
-                @if ($view === 'calendar')
-                    {{ $this->upcoming->collapse()->count() }} {{ __('in programma') }}
-                @else
-                    {{ $this->upNext->count() }} {{ __('serie in corso') }}
-                @endif
-            </flux:text>
-        </div>
-        @if (! $this->upNext->isEmpty() || ! $this->upcoming->isEmpty())
-            <div class="flex shrink-0 gap-1">
-                <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
-                    :variant="$view === 'list' ? 'primary' : 'outline'" aria-label="{{ __('Lista') }}" />
-                <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
-                    :variant="$view === 'grid' ? 'primary' : 'outline'" aria-label="{{ __('Griglia') }}" />
-                <flux:button size="sm" icon="calendar-days" wire:click="$set('view', 'calendar')"
-                    :variant="$view === 'calendar' ? 'primary' : 'outline'" aria-label="{{ __('Calendario') }}" />
+    @php
+        $hasContent = $tab === 'movies'
+            ? ! $this->watchlistMovies->isEmpty()
+            : (! $this->upNext->isEmpty() || ! $this->upcoming->isEmpty());
+    @endphp
+
+    <div class="flex flex-col gap-4">
+        <div class="flex items-start justify-between gap-4">
+            <div class="flex min-w-0 flex-col gap-0.5">
+                <flux:heading size="xl">
+                    @if ($tab === 'movies')
+                        {{ __('Film da vedere') }}
+                    @else
+                        {{ $view === 'calendar' ? __('Episodi in arrivo') : __('Serie da vedere') }}
+                    @endif
+                </flux:heading>
+                <flux:text size="sm" class="text-zinc-500">
+                    @if ($tab === 'movies')
+                        {{ $this->watchlistMovies->count() }} {{ __('film da vedere') }}
+                    @elseif ($view === 'calendar')
+                        {{ $this->upcoming->collapse()->count() }} {{ __('in programma') }}
+                    @else
+                        {{ $this->upNext->count() }} {{ __('serie in corso') }}
+                    @endif
+                </flux:text>
             </div>
-        @endif
+
+            <div class="flex shrink-0 items-center gap-1">
+                @if ($hasContent)
+                    <flux:button size="sm" icon="list-bullet" wire:click="$set('view', 'list')"
+                        :variant="$view === 'list' ? 'primary' : 'outline'" aria-label="{{ __('Lista') }}" />
+                    <flux:button size="sm" icon="squares-2x2" wire:click="$set('view', 'grid')"
+                        :variant="$view === 'grid' ? 'primary' : 'outline'" aria-label="{{ __('Griglia') }}" />
+                    <flux:button size="sm" icon="calendar-days" wire:click="$set('view', 'calendar')"
+                        :variant="$view === 'calendar' ? 'primary' : 'outline'" aria-label="{{ __('Calendario') }}" />
+                @endif
+                @if (! empty($this->platforms))
+                    @include('partials.platform-filter', ['platforms' => $this->platforms])
+                @endif
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex gap-2">
+                @foreach (['series' => 'Serie', 'movies' => 'Film'] as $key => $label)
+                    <flux:button size="sm" wire:click="$set('tab', '{{ $key }}')"
+                        :variant="$tab === $key ? 'primary' : 'outline'">{{ __($label) }}</flux:button>
+                @endforeach
+            </div>
+        </div>
+
+        @include('partials.platform-badges')
     </div>
 
-    @if ($view === 'calendar')
+    @if ($tab === 'movies')
+        @if ($this->watchlistMovies->isEmpty())
+            <div class="flex flex-col items-center gap-2 py-16 text-center">
+                <flux:icon.film class="size-10 text-zinc-400" />
+                <flux:heading size="lg">{{ __('Nessun film da vedere') }}</flux:heading>
+                <flux:text class="text-zinc-500">{{ __('Aggiungi film dalla ricerca per ritrovarli qui.') }}</flux:text>
+            </div>
+        @elseif ($view === 'grid')
+            <div class="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                @foreach ($this->watchlistMovies as $um)
+                    @php $item = ['type' => 'movie', 'title' => $um->movie->title, 'poster' => $um->movie->poster_path, 'meta' => $um->movie->release_date?->year ? (string) $um->movie->release_date->year : __('Film')]; @endphp
+                    <flux:link :href="route('movies.show', $um->movie)" wire:navigate class="group flex flex-col gap-2 no-underline">
+                        @include('partials.library-card', ['item' => $item])
+                    </flux:link>
+                @endforeach
+            </div>
+        @elseif ($view === 'calendar')
+            <div class="flex flex-col gap-6">
+                @foreach ($this->moviesByYear as $year => $movies)
+                    <div class="flex flex-col gap-3">
+                        <flux:heading size="sm" class="text-zinc-500">{{ $year === '—' ? __('Senza data') : $year }}</flux:heading>
+                        <div class="flex flex-col gap-2">
+                            @foreach ($movies as $um)
+                                @include('partials.movie-row', ['movie' => $um->movie])
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="flex flex-col gap-2">
+                @foreach ($this->watchlistMovies as $um)
+                    @include('partials.movie-row', ['movie' => $um->movie])
+                @endforeach
+            </div>
+        @endif
+    @elseif ($view === 'calendar')
         @if ($this->upcoming->isEmpty())
             <div class="flex flex-col items-center gap-2 py-16 text-center">
                 <flux:icon.calendar-days class="size-10 text-zinc-400" />

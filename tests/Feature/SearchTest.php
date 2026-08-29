@@ -51,6 +51,20 @@ it('finds shows and adds one (with episodes) to the library', function () {
         ->and(Episode::where('show_id', $show->id)->count())->toBe(1);
 });
 
+it('removes a followed title from the library via the cover', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake(['https://api.themoviedb.org/3/*' => Http::response(['results' => []])]);
+
+    $user = User::factory()->create();
+    $show = Show::factory()->create(['tmdb_id' => 300, 'name' => 'Follows']);
+    UserShow::factory()->create(['user_id' => $user->id, 'show_id' => $show->id, 'status' => 'following']);
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->call('remove', 300, 'series');
+
+    expect(UserShow::where('user_id', $user->id)->where('show_id', $show->id)->exists())->toBeFalse();
+});
+
 it('finds movies and adds one to the library', function () {
     config(['services.tmdb.token' => 'fake-token']);
     Http::fake([

@@ -1,9 +1,12 @@
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2" wire:key="sc-{{ $type }}-{{ $item['tmdb_id'] }}">
     <div class="relative">
         @if ($item['href'])
-            <span class="absolute right-1.5 top-1.5 z-10 rounded-full bg-green-600 p-1.5 text-white" aria-label="{{ __('In libreria') }}">
-                <flux:icon.check class="size-4" />
-            </span>
+            <button type="button" wire:click="remove({{ $item['tmdb_id'] }}, '{{ $type }}')"
+                wire:confirm="{{ __('Rimuovere dai seguiti?') }}"
+                class="group/rm absolute right-1.5 top-1.5 z-10 rounded-full bg-green-600 p-1.5 text-white shadow" aria-label="{{ __('Rimuovi dai seguiti') }}">
+                <flux:icon.check class="size-4 group-hover/rm:hidden" />
+                <flux:icon.x-mark class="hidden size-4 group-hover/rm:block" />
+            </button>
         @else
             <button type="button" wire:click="add({{ $item['tmdb_id'] }}, '{{ $type }}')"
                 class="absolute right-1.5 top-1.5 z-10 rounded-full bg-accent-content p-1.5 text-accent-foreground shadow" aria-label="{{ __('Aggiungi') }}">

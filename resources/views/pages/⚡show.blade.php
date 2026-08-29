@@ -6,6 +6,7 @@ use App\Models\UserList;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use App\Services\Tmdb;
+use App\Services\WatchProviders;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
@@ -16,6 +17,9 @@ new class extends Component {
 
     /** @var list<int> Stagioni aperte nell'accordion. */
     public array $openSeasons = [];
+
+    /** Episodio appena segnato per cui chiedere se marcare anche i precedenti. */
+    public ?int $askPreviousFor = null;
 
     public function mount(Show $show): void
     {
@@ -49,19 +53,7 @@ new class extends Component {
     #[Computed]
     public function providers(): array
     {
-        if (! $this->show->tmdb_id) {
-            return ['link' => null, 'flatrate' => []];
-        }
-
-        return Cache::remember(
-            "show:{$this->show->tmdb_id}:providers",
-            now()->addHours(12),
-            fn (): array => rescue(
-                fn () => app(Tmdb::class)->showProviders($this->show->tmdb_id),
-                ['link' => null, 'flatrate' => []],
-                report: false,
-            ),
-        );
+        return app(WatchProviders::class)->forShow($this->show);
     }
 
     #[Computed]
@@ -218,16 +210,68 @@ new class extends Component {
 
         if ($watch) {
             $watch->delete();
-        } else {
-            WatchedEpisode::create([
-                'user_id' => Auth::id(),
-                'episode_id' => $episodeId,
-                'watched_at' => now(),
-            ]);
-            $this->ensureFollowing();
+            $this->refreshLists();
+
+            return;
         }
 
+        WatchedEpisode::create([
+            'user_id' => Auth::id(),
+            'episode_id' => $episodeId,
+            'watched_at' => now(),
+        ]);
+        $this->ensureFollowing();
         $this->refreshLists();
+
+        if ($this->hasEarlierUnwatched($episodeId)) {
+            $this->askPreviousFor = $episodeId;
+            $this->modal('mark-previous')->show();
+        }
+    }
+
+    /**
+     * Ci sono episodi precedenti a $episodeId ancora non visti?
+     */
+    private function hasEarlierUnwatched(int $episodeId): bool
+    {
+        $target = Episode::find($episodeId);
+        if ($target === null) {
+            return false;
+        }
+
+        $earlier = $this->show->episodes()
+            ->where(function ($q) use ($target) {
+                $q->where('season_number', '<', $target->season_number)
+                    ->orWhere(fn ($q2) => $q2->where('season_number', $target->season_number)
+                        ->where('episode_number', '<', $target->episode_number));
+            })
+            ->pluck('id');
+
+        if ($earlier->isEmpty()) {
+            return false;
+        }
+
+        $seen = WatchedEpisode::where('user_id', Auth::id())
+            ->whereIn('episode_id', $earlier)
+            ->count();
+
+        return $seen < $earlier->count();
+    }
+
+    public function confirmPrevious(): void
+    {
+        if ($this->askPreviousFor !== null) {
+            $this->markUpTo($this->askPreviousFor);
+        }
+
+        $this->askPreviousFor = null;
+        $this->modal('mark-previous')->close();
+    }
+
+    public function dismissPrevious(): void
+    {
+        $this->askPreviousFor = null;
+        $this->modal('mark-previous')->close();
     }
 
     public function markSeason(int $season): void
@@ -235,6 +279,15 @@ new class extends Component {
         $this->markEpisodes(
             $this->show->episodes()->where('season_number', $season)->pluck('id')
         );
+    }
+
+    public function unmarkSeason(int $season): void
+    {
+        WatchedEpisode::where('user_id', Auth::id())
+            ->whereIn('episode_id', $this->show->episodes()->where('season_number', $season)->select('id'))
+            ->delete();
+
+        $this->refreshLists();
     }
 
     public function markAll(): void
@@ -433,6 +486,11 @@ new class extends Component {
                         <flux:button size="sm" icon="check" variant="primary"
                             wire:click="markSeason({{ $seasonNumber }})"
                             aria-label="{{ __('Segna stagione come vista') }}" />
+                    @else
+                        <flux:button size="sm" icon="check" variant="primary" color="green"
+                            wire:click="unmarkSeason({{ $seasonNumber }})"
+                            wire:confirm="{{ __('Togliere il «visto» da tutti gli episodi della stagione?') }}"
+                            aria-label="{{ __('Segna stagione come non vista') }}" />
                     @endif
                 </div>
 
@@ -480,4 +538,14 @@ new class extends Component {
         @endforelse
     </div>
 
+    <flux:modal name="mark-previous" class="max-w-sm">
+        <div class="flex flex-col gap-5">
+            <flux:heading size="lg">{{ __('Episodi precedenti') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('Hai già visto anche gli episodi precedenti? Li segno come visti.') }}</flux:text>
+            <div class="flex gap-2">
+                <flux:button wire:click="confirmPrevious" variant="primary" class="flex-1">{{ __('Sì, segnali') }}</flux:button>
+                <flux:button wire:click="dismissPrevious" variant="outline" class="flex-1">{{ __('No') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

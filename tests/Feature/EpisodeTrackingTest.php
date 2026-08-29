@@ -131,6 +131,66 @@ it('marks all episodes up to a given one', function () {
     expect(WatchedEpisode::where('episode_id', $last->id)->exists())->toBeFalse();
 });
 
+it('offers to mark earlier episodes and marks them on confirm', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[1, 1], [1, 2], [1, 3]]);
+    $third = Episode::where(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 3])->first();
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('toggle', $third->id)
+        ->assertSet('askPreviousFor', $third->id)
+        ->call('confirmPrevious');
+
+    expect(WatchedEpisode::where('user_id', $user->id)->count())->toBe(3);
+});
+
+it('marks only the single episode when declining the earlier prompt', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[1, 1], [1, 2], [1, 3]]);
+    $third = Episode::where(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 3])->first();
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('toggle', $third->id)
+        ->call('dismissPrevious');
+
+    expect(WatchedEpisode::where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('does not prompt for earlier episodes when marking the first one', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[1, 1], [1, 2]]);
+    $first = Episode::where(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1])->first();
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('toggle', $first->id)
+        ->assertSet('askPreviousFor', null);
+});
+
+it('marks earlier episodes from the episode page on confirm', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[1, 1], [1, 2], [1, 3]]);
+    $third = Episode::where(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 3])->first();
+
+    Livewire::actingAs($user)->test('pages::episode', ['episode' => $third])
+        ->call('toggle')
+        ->call('markPrevious');
+
+    expect(WatchedEpisode::where('user_id', $user->id)->count())->toBe(3);
+});
+
+it('unmarks a completed season', function () {
+    $user = User::factory()->create();
+    $show = showWithEpisodes([[1, 1], [1, 2], [2, 1]]);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('markSeason', 1);
+    expect(WatchedEpisode::where('user_id', $user->id)->count())->toBe(2);
+
+    Livewire::actingAs($user)->test('pages::show', ['show' => $show])
+        ->call('unmarkSeason', 1);
+    expect(WatchedEpisode::where('user_id', $user->id)->count())->toBe(0);
+});
+
 it('does not double-count when marking a season twice', function () {
     $user = User::factory()->create();
     $show = showWithEpisodes([[1, 1], [1, 2]]);

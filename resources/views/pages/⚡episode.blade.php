@@ -2,9 +2,8 @@
 
 use App\Models\Episode;
 use App\Models\WatchedEpisode;
-use App\Services\Tmdb;
+use App\Services\WatchProviders;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -32,34 +31,88 @@ new class extends Component {
     #[Computed]
     public function providers(): array
     {
-        if (! $this->episode->show->tmdb_id) {
-            return ['link' => null, 'flatrate' => []];
-        }
-
-        return Cache::remember(
-            "show:{$this->episode->show->tmdb_id}:providers",
-            now()->addHours(12),
-            fn (): array => rescue(
-                fn () => app(Tmdb::class)->showProviders($this->episode->show->tmdb_id),
-                ['link' => null, 'flatrate' => []],
-                report: false,
-            ),
-        );
+        return app(WatchProviders::class)->forShow($this->episode->show);
     }
 
     public function toggle(): void
     {
         if ($watch = $this->watch()) {
             $watch->delete();
-        } else {
-            WatchedEpisode::create([
-                'user_id' => Auth::id(),
-                'episode_id' => $this->episode->id,
-                'watched_at' => now(),
-            ]);
+            unset($this->watch);
+
+            return;
+        }
+
+        WatchedEpisode::create([
+            'user_id' => Auth::id(),
+            'episode_id' => $this->episode->id,
+            'watched_at' => now(),
+        ]);
+        unset($this->watch);
+
+        if ($this->hasEarlierUnwatched()) {
+            $this->modal('mark-previous')->show();
+        }
+    }
+
+    /**
+     * Ci sono episodi della serie precedenti a questo ancora non visti?
+     */
+    private function hasEarlierUnwatched(): bool
+    {
+        $earlier = $this->episode->show->episodes()
+            ->where(function ($q) {
+                $q->where('season_number', '<', $this->episode->season_number)
+                    ->orWhere(fn ($q2) => $q2->where('season_number', $this->episode->season_number)
+                        ->where('episode_number', '<', $this->episode->episode_number));
+            })
+            ->pluck('id');
+
+        if ($earlier->isEmpty()) {
+            return false;
+        }
+
+        $seen = WatchedEpisode::where('user_id', Auth::id())
+            ->whereIn('episode_id', $earlier)
+            ->count();
+
+        return $seen < $earlier->count();
+    }
+
+    public function markPrevious(): void
+    {
+        $ids = $this->episode->show->episodes()
+            ->where(function ($q) {
+                $q->where('season_number', '<', $this->episode->season_number)
+                    ->orWhere(fn ($q2) => $q2->where('season_number', $this->episode->season_number)
+                        ->where('episode_number', '<=', $this->episode->episode_number));
+            })
+            ->pluck('id');
+
+        $existing = WatchedEpisode::where('user_id', Auth::id())
+            ->whereIn('episode_id', $ids)
+            ->pluck('episode_id');
+
+        $now = now();
+        $rows = $ids->diff($existing)->map(fn (int $id) => [
+            'user_id' => Auth::id(),
+            'episode_id' => $id,
+            'watched_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        if ($rows !== []) {
+            WatchedEpisode::insert($rows);
         }
 
         unset($this->watch);
+        $this->modal('mark-previous')->close();
+    }
+
+    public function dismissPrevious(): void
+    {
+        $this->modal('mark-previous')->close();
     }
 
     public function rate(int $stars): void
@@ -134,4 +187,15 @@ new class extends Component {
             </div>
         </div>
     @endif
+
+    <flux:modal name="mark-previous" class="max-w-sm">
+        <div class="flex flex-col gap-5">
+            <flux:heading size="lg">{{ __('Episodi precedenti') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('Hai già visto anche gli episodi precedenti? Li segno come visti.') }}</flux:text>
+            <div class="flex gap-2">
+                <flux:button wire:click="markPrevious" variant="primary" class="flex-1">{{ __('Sì, segnali') }}</flux:button>
+                <flux:button wire:click="dismissPrevious" variant="outline" class="flex-1">{{ __('No') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
