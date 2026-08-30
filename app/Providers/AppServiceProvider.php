@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Porta dedicata al progetto per il preview browser (`composer dev`),
+        // così non collide con gli altri Laravel avviati insieme.
+        DevCommands::artisan('serve --port=8006', 'server');
+        DevCommands::node('dev -- --port=5186', 'vite');
     }
 
     /**
