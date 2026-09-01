@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Show;
 use App\Models\User;
 use App\Models\WatchedEpisode;
@@ -20,7 +22,7 @@ function recordsCsv(): string
 function exportZip(array $files): UploadedFile
 {
     $path = tempnam(sys_get_temp_dir(), 'tvt').'.zip';
-    $zip = new ZipArchive;
+    $zip = new ZipArchive();
     $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
     foreach ($files as $name => $content) {
         $zip->addFromString($name, $content);

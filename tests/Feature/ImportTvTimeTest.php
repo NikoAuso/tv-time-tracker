@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Episode;
 use App\Models\Show;
 use App\Models\User;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\Settings;
 
 use App\Models\User;
@@ -55,7 +57,7 @@ class ProfileUpdateTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertTrue(
-            UserList::where('user_id', $user->id)->where('name', 'Preferiti')->exists()
+            UserList::where('user_id', $user->id)->where('name', 'Preferiti')->exists(),
         );
     }
 }

@@ -12,12 +12,14 @@ use App\Models\UserMovie;
 use App\Models\UserShow;
 use App\Models\WatchedEpisode;
 use App\Services\MovieMatcher;
+use Generator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 #[Signature('import:tvtime {path : Cartella che contiene i CSV export di TV Time} {--user= : ID utente destinazione}')]
 #[Description('Importa serie, episodi e visualizzazioni da un export GDPR di TV Time')]
@@ -243,13 +245,13 @@ class ImportTvTime extends Command
     /**
      * Legge il CSV come righe associative header => valore.
      *
-     * @return \Generator<int, array<string, string>>
+     * @return Generator<int, array<string, string>>
      */
-    private function rows(string $file): \Generator
+    private function rows(string $file): Generator
     {
         $handle = fopen($file, 'r');
         if ($handle === false) {
-            throw new \RuntimeException("Impossibile aprire il file CSV: {$file}");
+            throw new RuntimeException("Impossibile aprire il file CSV: {$file}");
         }
 
         $header = fgetcsv($handle);

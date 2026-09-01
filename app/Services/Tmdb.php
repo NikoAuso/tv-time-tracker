@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class Tmdb
 {
@@ -29,7 +30,7 @@ class Tmdb
     {
         try {
             return $this->client()->get('/authentication')->successful();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return false;  // client() ha retry con throw: 401 o connessione ko -> non valido
         }
     }
@@ -90,7 +91,7 @@ class Tmdb
         $episodes = (array) ($response->json('episodes') ?? []);
 
         $missing = collect($episodes)->contains(
-            fn (array $e): bool => $this->blankField($e, 'name') || $this->blankField($e, 'overview')
+            fn (array $e): bool => $this->blankField($e, 'name') || $this->blankField($e, 'overview'),
         );
         if (! $missing) {
             return $episodes;
