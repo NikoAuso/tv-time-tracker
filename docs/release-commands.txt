@@ -1,0 +1,40 @@
+========================================================================
+ RELEASE TvTimeTracker v1.0.0 — comandi da copiare nel terminale
+========================================================================
+
+# 1) Pusha l'ultimo commit di config (se non già fatto)
+git push
+
+# 2) Crea la GitHub Release con l'APK firmato allegato
+gh release create v1.0.0 ~/tvtimetracker-v1.0.0.apk \
+  --title "TvTimeTracker v1.0.0" \
+  --notes "Prima release — Android (sideload).
+
+- Abilita \"Installa da fonti sconosciute\" per installare l'APK.
+- Serve un token TMDB personale, che inserisci in-app (Profilo → Token TMDB).
+- L'app parte vuota: importa i tuoi dati da TV Time via export GDPR o estensione TV Time Out (Profilo → Importa / Esporta dati)."
+
+# 3) Verifica la release nel browser
+gh release view v1.0.0 --web
+
+
+========================================================================
+ RELEASE FUTURE (vX.Y.Z) — promemoria
+========================================================================
+# Usa SEMPRE lo stesso keystore (credentials/app-release-key.jks) e le stesse
+# password: se le perdi non potrai più firmare aggiornamenti.
+
+# 1) Incrementa la versione nel .env
+#    NATIVEPHP_APP_VERSION=X.Y.Z      (il version_code si auto-incrementa)
+
+# 2) Build pubblico (app vuota, senza dati personali) + firma
+mv database/seed.sqlite /tmp/seed-personale.sqlite
+php artisan native:package android --build-type=release
+mv /tmp/seed-personale.sqlite database/seed.sqlite
+
+# 3) Copia l'APK con nome versionato
+cp nativephp/android/app/build/outputs/apk/release/app-release.apk ~/tvtimetracker-vX.Y.Z.apk
+
+# 4) Pubblica
+git push
+gh release create vX.Y.Z ~/tvtimetracker-vX.Y.Z.apk --title "TvTimeTracker vX.Y.Z" --notes "..."

@@ -1,0 +1,74 @@
+--- a/nativephp/android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt
++++ b/nativephp/android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt
+@@ -7,9 +7,12 @@
+ import android.os.Looper
+ import android.os.Handler
+ import android.util.Log
++import android.net.Uri
+ import android.webkit.CookieManager
++import android.webkit.ValueCallback
+ import androidx.fragment.app.FragmentActivity
+ import androidx.activity.compose.setContent
++import androidx.activity.result.contract.ActivityResultContracts
+ import com.nativephp.mobile.bridge.PHPBridge
+ import com.nativephp.mobile.bridge.PHPQueueWorker
+ import com.nativephp.mobile.bridge.LaravelEnvironment
+@@ -67,6 +70,15 @@
+     private var pendingInsets: Insets? = null
+     private var showSplash by mutableStateOf(true)
+ 
++    // Pending callback for the WebView's <input type="file"> chooser
++    private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
++    private val fileChooserLauncher =
++        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
++            val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
++            fileChooserCallback?.onReceiveValue(uris)
++            fileChooserCallback = null
++        }
++
+     // Status bar style configuration - replaced during build
+     private val statusBarStyle = "auto"
+ 
+@@ -76,6 +88,23 @@
+             private set
+     }
+ 
++    // Called by WebViewManager.onShowFileChooser to open the system document picker.
++    // params.createIntent() honours the input's accept (.zip/.json) and multiple attrs.
++    fun showFileChooser(
++        callback: ValueCallback<Array<Uri>>,
++        params: WebChromeClient.FileChooserParams
++    ): Boolean {
++        fileChooserCallback?.onReceiveValue(null)
++        fileChooserCallback = callback
++        return try {
++            fileChooserLauncher.launch(params.createIntent())
++            true
++        } catch (e: android.content.ActivityNotFoundException) {
++            fileChooserCallback = null
++            false
++        }
++    }
++
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         instance = this
+--- a/nativephp/android/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt
++++ b/nativephp/android/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt
+@@ -121,6 +121,16 @@
+                 )
+                 return true
+             }
++
++            // Wire HTML <input type="file"> to the system document picker; the base
++            // WebChromeClient returns false here, so without this the field does nothing.
++            override fun onShowFileChooser(
++                webView: WebView,
++                filePathCallback: ValueCallback<Array<Uri>>,
++                fileChooserParams: FileChooserParams
++            ): Boolean {
++                return (context as? MainActivity)?.showFileChooser(filePathCallback, fileChooserParams) ?: false
++            }
+         }
+     }
+ 
