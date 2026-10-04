@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -16,13 +20,15 @@ class Tmdb
 
     public function __construct(private readonly ?string $token = null) {}
 
-    private function client(): PendingRequest
+    private function client(?PendingRequest $request = null): PendingRequest
     {
-        return Http::baseUrl(self::BASE)
+        return ($request ?? Http::createPendingRequest())->baseUrl(self::BASE)
             ->withToken($this->token ?? (string) config('services.tmdb.token'))
             ->withQueryParameters(['language' => self::LANGUAGE])
             ->acceptJson()
-            ->retry(2, 200);
+            // Ritenta solo errori transitori; 404 & co. tornano come risposta (gestita con ok()), senza eccezione.
+            ->retry(2, 200, fn (Throwable $e): bool => $e instanceof ConnectionException
+                || ($e instanceof RequestException && ($e->response->serverError() || $e->response->status() === 429)), throw: false);
     }
 
     /** True se il token è accettato da TMDB (200 su /authentication; 401/errore/offline = non valido). */
@@ -31,7 +37,7 @@ class Tmdb
         try {
             return $this->client()->get('/authentication')->successful();
         } catch (Throwable) {
-            return false;  // client() ha retry con throw: 401 o connessione ko -> non valido
+            return false;  // connessione ko -> non valido
         }
     }
 
@@ -76,46 +82,69 @@ class Tmdb
     }
 
     /**
-     * Episodi di una stagione. I campi testuali senza traduzione italiana
-     * (tipicamente titolo e trama dell'episodio) vengono presi in inglese.
+     * Episodi delle stagioni indicate, scaricate in parallelo. I campi testuali
+     * senza traduzione italiana (tipicamente titolo e trama dell'episodio)
+     * vengono presi in inglese.
      *
-     * @return array<int, array<string, mixed>>
+     * @param  array<int, int>  $seasonNumbers
+     * @return array<int, array<int, array<string, mixed>>> season_number => episodi
      */
-    public function getSeasonEpisodes(int $tmdbId, int $seasonNumber): array
+    public function getSeasonsEpisodes(int $tmdbId, array $seasonNumbers): array
     {
-        $response = $this->client()->get("/tv/{$tmdbId}/season/{$seasonNumber}");
-        if (! $response->ok()) {
-            return [];
-        }
+        $paths = collect($seasonNumbers)->mapWithKeys(fn (int $n): array => [$n => "/tv/{$tmdbId}/season/{$n}"])->all();
 
-        $episodes = (array) ($response->json('episodes') ?? []);
+        $seasons = array_map(fn (?array $json): array => (array) ($json['episodes'] ?? []), $this->getMany($paths));
 
-        $missing = collect($episodes)->contains(
+        $missing = array_filter($seasons, fn (array $episodes): bool => collect($episodes)->contains(
             fn (array $e): bool => $this->blankField($e, 'name') || $this->blankField($e, 'overview'),
-        );
-        if (! $missing) {
-            return $episodes;
-        }
+        ));
+        $english = $this->getMany(array_intersect_key($paths, $missing), ['language' => 'en-US']);
 
-        $en = $this->client()->get("/tv/{$tmdbId}/season/{$seasonNumber}", ['language' => 'en-US']);
-        if (! $en->ok()) {
-            return $episodes;
-        }
-        $enByNumber = collect((array) ($en->json('episodes') ?? []))->keyBy('episode_number');
+        foreach ($english as $n => $json) {
+            $enByNumber = collect((array) ($json['episodes'] ?? []))->keyBy('episode_number');
 
-        return collect($episodes)->map(function (array $e) use ($enByNumber): array {
-            $enEp = $enByNumber->get($e['episode_number'] ?? null);
-            if (! is_array($enEp)) {
-                return $e;
-            }
-            foreach (['name', 'overview'] as $field) {
-                if ($this->blankField($e, $field) && ! $this->blankField($enEp, $field)) {
-                    $e[$field] = $enEp[$field];
+            $seasons[$n] = collect($seasons[$n])->map(function (array $e) use ($enByNumber): array {
+                $enEp = $enByNumber->get($e['episode_number'] ?? null);
+                if (! is_array($enEp)) {
+                    return $e;
                 }
-            }
+                foreach (['name', 'overview'] as $field) {
+                    if ($this->blankField($e, $field) && ! $this->blankField($enEp, $field)) {
+                        $e[$field] = $enEp[$field];
+                    }
+                }
 
-            return $e;
-        })->all();
+                return $e;
+            })->all();
+        }
+
+        return $seasons;
+    }
+
+    /**
+     * GET in parallelo, a blocchi per restare sotto il rate limit TMDB.
+     *
+     * @param  array<int, string>  $paths
+     * @param  array<string, string>  $query
+     * @return array<int, array<string, mixed>|null> stessa chiave di $paths, null se fallita
+     */
+    private function getMany(array $paths, array $query = []): array
+    {
+        $results = [];
+
+        foreach (array_chunk($paths, 10, preserve_keys: true) as $chunk) {
+            $responses = Http::pool(fn (Pool $pool): array => array_map(
+                fn (int $key): mixed => $this->client($pool->as((string) $key))->get($chunk[$key], $query),
+                array_keys($chunk),
+            ));
+
+            foreach (array_keys($chunk) as $key) {
+                $response = $responses[$key] ?? null;
+                $results[$key] = $response instanceof Response && $response->ok() ? (array) $response->json() : null;
+            }
+        }
+
+        return $results;
     }
 
     /**

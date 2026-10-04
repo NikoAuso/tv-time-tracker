@@ -25,6 +25,9 @@ new #[Title('Risincronizza da TMDB')] class extends Component
 
         config(['services.tmdb.token' => $token]);
 
+        // Una libreria grande supera i 30s di default di max_execution_time.
+        set_time_limit(0);
+
         Artisan::call('shows:sync', ['--all' => true]);
         Artisan::call('movies:sync', ['--all' => true]);
 

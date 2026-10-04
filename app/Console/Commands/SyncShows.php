@@ -10,6 +10,7 @@ use App\Services\Tmdb;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 #[Signature('shows:sync {--all : Risincronizza anche le serie già collegate a TMDB}')]
 #[Description('Arricchisce le serie con dati TMDB: poster, elenco episodi, runtime e stato')]
@@ -44,7 +45,10 @@ class SyncShows extends Command
         $bar->start();
 
         foreach ($shows as $show) {
-            $this->syncShow($tmdb, $show, $counters);
+            // Una transazione per serie: su SQLite evita un commit (fsync) per ogni episodio.
+            DB::transaction(function () use ($tmdb, $show, &$counters): void {
+                $this->syncShow($tmdb, $show, $counters);
+            });
             $bar->advance();
         }
 
@@ -80,6 +84,9 @@ class SyncShows extends Command
             return;
         }
 
+        // Serie concluse già scaricate: gli episodi non cambiano più, basta aggiornare i metadati.
+        $settled = in_array($show->status, ['Ended', 'Canceled'], true) && $show->episodes()->exists();
+
         $show->fill([
             'name' => $data['name'] ?? $show->name,
             'poster_path' => $data['poster_path'] ?? $show->poster_path,
@@ -92,13 +99,14 @@ class SyncShows extends Command
         ])->save();
         $counters['synced']++;
 
-        foreach ($data['seasons'] ?? [] as $season) {
-            $seasonNumber = $season['season_number'] ?? null;
-            if ($seasonNumber === null) {
-                continue;
-            }
+        if ($settled) {
+            return;
+        }
 
-            foreach ($tmdb->getSeasonEpisodes((int) $show->tmdb_id, (int) $seasonNumber) as $episode) {
+        $seasonNumbers = array_map(intval(...), array_filter(array_column($data['seasons'] ?? [], 'season_number'), fn ($n) => $n !== null));
+
+        foreach ($tmdb->getSeasonsEpisodes((int) $show->tmdb_id, $seasonNumbers) as $seasonNumber => $episodes) {
+            foreach ($episodes as $episode) {
                 if (! isset($episode['episode_number'])) {
                     continue;
                 }

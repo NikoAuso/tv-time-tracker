@@ -51,7 +51,7 @@ it('fills empty italian episode text from english', function () {
         ]]),
     ]);
 
-    $episodes = app(Tmdb::class)->getSeasonEpisodes(1, 1);
+    $episodes = app(Tmdb::class)->getSeasonsEpisodes(1, [1])[1];
 
     expect($episodes[0]['name'])->toBe('The Pilot')
         ->and($episodes[0]['overview'])->toBe('English episode.');

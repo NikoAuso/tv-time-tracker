@@ -38,13 +38,10 @@ class TmdbLibrary
             ],
         );
 
-        foreach ($data['seasons'] ?? [] as $season) {
-            $seasonNumber = $season['season_number'] ?? null;
-            if ($seasonNumber === null) {
-                continue;
-            }
+        $seasonNumbers = array_map(intval(...), array_filter(array_column($data['seasons'] ?? [], 'season_number'), fn ($n) => $n !== null));
 
-            foreach ($this->tmdb->getSeasonEpisodes($tmdbId, (int) $seasonNumber) as $episode) {
+        foreach ($this->tmdb->getSeasonsEpisodes($tmdbId, $seasonNumbers) as $seasonNumber => $episodes) {
+            foreach ($episodes as $episode) {
                 if (! isset($episode['episode_number'])) {
                     continue;
                 }

@@ -101,3 +101,76 @@ it('stores an empty overview when TMDB has none, so the show is not re-synced', 
 
     expect($show->fresh()->overview)->toBe('');
 });
+
+it('skips a show missing on TMDB and keeps syncing the others', function () {
+    config(['services.tmdb.token' => 'test-token']);
+
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/1/*' => Http::response([], 404),
+        'https://api.themoviedb.org/3/tv/1?*' => Http::response([], 404),
+        'https://api.themoviedb.org/3/tv/2/season/*' => Http::response(['episodes' => [['id' => 9, 'episode_number' => 1, 'name' => 'Ep', 'overview' => 'x']]]),
+        'https://api.themoviedb.org/3/tv/2*' => Http::response(['id' => 2, 'name' => 'Alive', 'overview' => 'ok', 'seasons' => [['season_number' => 1]]]),
+    ]);
+
+    Show::factory()->create(['tmdb_id' => 1, 'overview' => null]);
+    $alive = Show::factory()->create(['tmdb_id' => 2, 'overview' => null]);
+
+    $this->artisan('shows:sync')->assertSuccessful();
+
+    expect($alive->refresh()->name)->toBe('Alive')
+        ->and($alive->episodes()->count())->toBe(1);
+    Http::assertSentCount(3);
+});
+
+it('skips the episode download for ended shows already synced', function () {
+    config(['services.tmdb.token' => 'test-token']);
+
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/3/season/*' => Http::response(['episodes' => [['episode_number' => 2, 'name' => 'New', 'overview' => 'x']]]),
+        'https://api.themoviedb.org/3/tv/3*' => Http::response(['id' => 3, 'name' => 'Done', 'overview' => 'ok', 'status' => 'Ended', 'seasons' => [['season_number' => 1]]]),
+    ]);
+
+    $show = Show::factory()->create(['tmdb_id' => 3, 'status' => 'Ended']);
+    Episode::factory()->create(['show_id' => $show->id, 'season_number' => 1, 'episode_number' => 1]);
+
+    $this->artisan('shows:sync', ['--all' => true])->assertSuccessful();
+
+    expect($show->refresh()->name)->toBe('Done')
+        ->and($show->episodes()->count())->toBe(1);
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), '/season/'));
+});
+
+it('still downloads episodes for an ended show synced for the first time', function () {
+    config(['services.tmdb.token' => 'test-token']);
+
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/4/season/*' => Http::response(['episodes' => [['episode_number' => 1, 'name' => 'Ep', 'overview' => 'x']]]),
+        'https://api.themoviedb.org/3/tv/4*' => Http::response(['id' => 4, 'name' => 'Old', 'overview' => 'ok', 'status' => 'Ended', 'seasons' => [['season_number' => 1]]]),
+    ]);
+
+    $show = Show::factory()->create(['tmdb_id' => 4, 'status' => 'Ended', 'overview' => null]);
+
+    $this->artisan('shows:sync')->assertSuccessful();
+
+    expect($show->episodes()->count())->toBe(1);
+});
+
+it('downloads all seasons of a show', function () {
+    config(['services.tmdb.token' => 'test-token']);
+
+    Http::fake([
+        'https://api.themoviedb.org/3/tv/5/season/1*' => Http::response(['episodes' => [['episode_number' => 1, 'name' => 'A', 'overview' => 'x']]]),
+        'https://api.themoviedb.org/3/tv/5/season/2*' => Http::response(['episodes' => [['episode_number' => 1, 'name' => 'B', 'overview' => 'x'], ['episode_number' => 2, 'name' => 'C', 'overview' => 'x']]]),
+        'https://api.themoviedb.org/3/tv/5/season/3*' => Http::response([], 404),
+        'https://api.themoviedb.org/3/tv/5*' => Http::response(['id' => 5, 'name' => 'Multi', 'overview' => 'ok', 'seasons' => [
+            ['season_number' => 1], ['season_number' => 2], ['season_number' => 3],
+        ]]),
+    ]);
+
+    $show = Show::factory()->create(['tmdb_id' => 5, 'overview' => null]);
+
+    $this->artisan('shows:sync')->assertSuccessful();
+
+    expect($show->episodes()->where('season_number', 1)->count())->toBe(1)
+        ->and($show->episodes()->where('season_number', 2)->count())->toBe(2);
+});
