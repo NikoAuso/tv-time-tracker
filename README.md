@@ -39,7 +39,7 @@ L'APK è firmato con un keystore personale, quindi Play Protect può mostrare un
 
 - **Serie da vedere**: primo episodio non visto per ogni serie seguita; viste lista, griglia o **calendario** (episodi in arrivo delle serie seguite, raggruppati per data)
 - **Libreria** unificata di serie e film con ricerca e filtri; le serie sono raggruppate in *Da iniziare / In corso / Concluse*
-- **Ricerca** su tutto il catalogo TMDB (serie e film), in vista lista o griglia
+- **Ricerca** su tutto il catalogo TMDB (serie e film), in vista lista o griglia; i film si segnano come visti direttamente dai risultati
 - Segna visto per **episodio**, per **stagione**, "fino a qui" o l'intera serie
 - **Voti a stelle** e **preferiti** per serie, film ed episodi
 - **Liste** personalizzate per organizzare serie e film
