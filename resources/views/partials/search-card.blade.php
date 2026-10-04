@@ -14,6 +14,13 @@
             </button>
         @endif
 
+        @if ($type === 'movies' && ! $item['watched'])
+            <button type="button" wire:click="watched({{ $item['tmdb_id'] }})"
+                class="absolute left-1.5 top-1.5 z-10 rounded-full bg-zinc-900/70 p-1.5 text-white shadow" aria-label="{{ __('Segna visto') }}">
+                <flux:icon.eye class="size-4" />
+            </button>
+        @endif
+
         <button type="button" wire:click="open({{ $item['tmdb_id'] }}, '{{ $type }}')" class="block w-full" aria-label="{{ $item['title'] }}">
             @include('partials.poster', ['poster' => $item['poster'], 'title' => $item['title'], 'ratio' => 'aspect-[2/3]', 'size' => 'w342'])
         </button>

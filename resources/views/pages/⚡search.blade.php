@@ -82,8 +82,11 @@ new #[Title('Cerca')] class extends Component {
     private function mapItems(array $raw, bool $movies): array
     {
         $inLibrary = $this->inLibrary($movies, collect($raw)->pluck('id')->all());
+        $watched = $movies
+            ? UserMovie::where('user_id', Auth::id())->where('status', 'watched')->whereIn('movie_id', $inLibrary->values())->pluck('movie_id')->all()
+            : [];
 
-        return collect($raw)->map(function (array $r) use ($movies, $inLibrary) {
+        return collect($raw)->map(function (array $r) use ($movies, $inLibrary, $watched) {
             $localId = $inLibrary[$r['id']] ?? null;
             $date = (string) ($movies ? ($r['release_date'] ?? '') : ($r['first_air_date'] ?? ''));
 
@@ -95,6 +98,7 @@ new #[Title('Cerca')] class extends Component {
                 'href' => $localId
                     ? ($movies ? route('movies.show', $localId) : route('shows.show', $localId))
                     : null,
+                'watched' => $localId !== null && in_array($localId, $watched, true),
             ];
         })->values()->all();
     }
@@ -152,6 +156,26 @@ new #[Title('Cerca')] class extends Component {
         Flux::toast(
             variant: $added ? 'success' : 'danger',
             text: $added ? __('Aggiunto a «Da vedere».') : __('Impossibile aggiungere: riprova.'),
+        );
+    }
+
+    public function watched(int $tmdbId): void
+    {
+        $movie = Movie::where('tmdb_id', $tmdbId)->first()
+            ?? ($this->hasToken() ? (new TmdbLibrary(new Tmdb($this->token())))->addMovie($tmdbId) : null);
+
+        if ($movie !== null) {
+            UserMovie::updateOrCreate(
+                ['user_id' => Auth::id(), 'movie_id' => $movie->id],
+                ['status' => 'watched', 'watched_at' => now()],
+            );
+        }
+
+        unset($this->results, $this->trendingShows, $this->trendingMovies);
+
+        Flux::toast(
+            variant: $movie ? 'success' : 'danger',
+            text: $movie ? __('Segnato come visto.') : __('Impossibile aggiungere: riprova.'),
         );
     }
 
@@ -236,15 +260,22 @@ new #[Title('Cerca')] class extends Component {
                                     </flux:text>
                                 </div>
                             </button>
-                            @if ($item['href'])
-                                <flux:button :href="$item['href']" wire:navigate size="sm" variant="outline" icon="check">
-                                    {{ __('In libreria') }}
-                                </flux:button>
-                            @else
-                                <flux:button wire:click="add({{ $item['tmdb_id'] }}, '{{ $type }}')" size="sm" variant="primary" icon="plus">
-                                    {{ __('Aggiungi') }}
-                                </flux:button>
-                            @endif
+                            <div class="flex shrink-0 flex-col items-end gap-1.5">
+                                @if ($item['href'])
+                                    <flux:button :href="$item['href']" wire:navigate size="sm" variant="outline" icon="check">
+                                        {{ $item['watched'] ? __('Visto') : __('In libreria') }}
+                                    </flux:button>
+                                @else
+                                    <flux:button wire:click="add({{ $item['tmdb_id'] }}, '{{ $type }}')" size="sm" variant="primary" icon="plus">
+                                        {{ __('Aggiungi') }}
+                                    </flux:button>
+                                @endif
+                                @if ($type === 'movies' && ! $item['watched'])
+                                    <flux:button wire:click="watched({{ $item['tmdb_id'] }})" size="sm" variant="outline" icon="eye">
+                                        {{ __('Segna visto') }}
+                                    </flux:button>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>

@@ -199,3 +199,59 @@ it('marks results already in the library', function () {
         ->set('q', 'house')
         ->assertSee('In libreria');
 });
+
+it('marks a movie not yet in the library as watched', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/trending/*' => Http::response(['results' => []]),
+        'https://api.themoviedb.org/3/movie/800*' => Http::response(['id' => 800, 'title' => 'Seen Movie']),
+    ]);
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->call('watched', 800)
+        ->assertHasNoErrors();
+
+    $entry = UserMovie::where('user_id', $user->id)->whereHas('movie', fn ($q) => $q->where('tmdb_id', 800))->first();
+    expect($entry?->status)->toBe('watched')
+        ->and($entry?->watched_at)->not->toBeNull();
+});
+
+it('marks a watchlist movie as watched and hides the button afterwards', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/trending/*' => Http::response(['results' => []]),
+        'https://api.themoviedb.org/3/search/movie*' => Http::response(['results' => [
+            ['id' => 900, 'title' => 'Fury', 'release_date' => '2014-10-15'],
+        ]]),
+    ]);
+
+    $user = User::factory()->create();
+    $movie = Movie::factory()->create(['tmdb_id' => 900, 'title' => 'Fury']);
+    UserMovie::factory()->create(['user_id' => $user->id, 'movie_id' => $movie->id, 'status' => 'watchlist']);
+
+    Livewire::actingAs($user)->test('pages::search')
+        ->set('type', 'movies')
+        ->set('q', 'fury')
+        ->assertSee('Segna visto')
+        ->call('watched', 900)
+        ->assertDontSee('Segna visto');
+
+    expect(UserMovie::where('user_id', $user->id)->where('movie_id', $movie->id)->value('status'))->toBe('watched')
+        ->and(UserMovie::where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('fails gracefully when the movie cannot be fetched', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        'https://api.themoviedb.org/3/trending/*' => Http::response(['results' => []]),
+        'https://api.themoviedb.org/3/movie/*' => Http::response([], 404),
+    ]);
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)->test('pages::search')->call('watched', 999);
+
+    expect(UserMovie::where('user_id', $user->id)->exists())->toBeFalse();
+});
