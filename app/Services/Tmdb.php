@@ -307,8 +307,39 @@ class Tmdb
     private function providers(string $type, int $tmdbId, string $region): array
     {
         $response = $this->client()->get("/{$type}/{$tmdbId}/watch/providers");
-        $data = $response->ok() ? ($response->json("results.{$region}") ?? []) : [];
 
+        return $this->parseProviders($response->ok() ? ($response->json("results.{$region}") ?? []) : []);
+    }
+
+    /**
+     * Piattaforme di più titoli, scaricate in parallelo.
+     *
+     * @param  'movie'|'tv'  $type
+     * @param  array<int, int>  $tmdbIds
+     * @return array<int, array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}> stessa chiave di $tmdbIds
+     */
+    public function manyProviders(string $type, array $tmdbIds, string $region = 'IT'): array
+    {
+        $providers = [];
+
+        // Un blocco alla volta: ogni risposta contiene tutte le regioni, tenerle tutte in memoria pesa on-device.
+        foreach (array_chunk($tmdbIds, 10, preserve_keys: true) as $chunk) {
+            $paths = array_map(fn (int $id): string => "/{$type}/{$id}/watch/providers", $chunk);
+
+            foreach ($this->getMany($paths) as $key => $json) {
+                $providers[$key] = $this->parseProviders((array) data_get($json, "results.{$region}", []));
+            }
+        }
+
+        return $providers;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{link: string|null, flatrate: array<int, array{name: string, logo_path: string|null}>}
+     */
+    private function parseProviders(array $data): array
+    {
         return [
             'link' => $data['link'] ?? null,
             'flatrate' => array_map(fn (array $p): array => [

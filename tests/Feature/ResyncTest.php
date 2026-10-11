@@ -37,6 +37,29 @@ it('resyncs the library from TMDB and populates providers', function () {
         ->and($movie->fresh()->providers['flatrate'][0]['name'])->toBe('Prime Video');
 });
 
+it('refreshes cached providers on resync and keeps going past titles missing on TMDB', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/movie/404/watch/providers*' => Http::response(['status_message' => 'Not found'], 404),
+        '*/watch/providers*' => Http::response(['results' => ['IT' => [
+            'flatrate' => [['provider_name' => 'Netflix', 'logo_path' => null]],
+        ]]]),
+        '*' => Http::response(['status_message' => 'Not found'], 404),
+    ]);
+
+    $user = User::factory()->create();
+    $cached = ['link' => null, 'flatrate' => [['name' => 'Old', 'logo_path' => null]]];
+    $gone = Movie::factory()->create(['tmdb_id' => 404, 'providers' => $cached, 'providers_synced_at' => now()]);
+    $movie = Movie::factory()->create(['tmdb_id' => 600, 'providers' => $cached, 'providers_synced_at' => now()]);
+    $untracked = Movie::factory()->create(['tmdb_id' => null, 'providers' => $cached]);
+
+    Livewire::actingAs($user)->test('pages::settings.resync')->call('resync');
+
+    expect($movie->fresh()->providers['flatrate'][0]['name'])->toBe('Netflix')
+        ->and($gone->fresh()->providers)->toBe(['link' => null, 'flatrate' => []])
+        ->and($untracked->fresh()->providers)->toBe($cached);
+});
+
 it('does nothing on resync without a TMDB token', function () {
     $user = User::factory()->withoutTmdbToken()->create();
 

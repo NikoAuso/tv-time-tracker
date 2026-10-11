@@ -100,6 +100,30 @@ it('extracts flatrate providers for the region', function () {
         ->and($providers['flatrate'])->toBe([['name' => 'Netflix', 'logo_path' => '/n.jpg']]);
 });
 
+it('fetches providers for many titles keyed like the input, across chunks', function () {
+    config(['services.tmdb.token' => 'fake-token']);
+    Http::fake([
+        '*/tv/404/watch/providers*' => Http::response(['status_message' => 'Not found'], 404),
+        '*/tv/7/watch/providers*' => Http::response(['results' => ['US' => [
+            'flatrate' => [['provider_name' => 'Hulu', 'logo_path' => null]],
+        ]]]),
+        '*/tv/*/watch/providers*' => Http::response(['results' => ['IT' => [
+            'flatrate' => [['provider_name' => 'Netflix', 'logo_path' => '/n.jpg']],
+        ]]]),
+    ]);
+
+    $ids = collect(range(1, 12))->mapWithKeys(fn (int $i): array => [$i + 100 => $i])->put(200, 404)->all();
+
+    $providers = app(Tmdb::class)->manyProviders('tv', $ids);
+
+    expect($providers)->toHaveCount(13)
+        ->and($providers[101]['flatrate'])->toBe([['name' => 'Netflix', 'logo_path' => '/n.jpg']])
+        ->and($providers[112]['flatrate'][0]['name'])->toBe('Netflix')
+        ->and($providers[107])->toBe(['link' => null, 'flatrate' => []])
+        ->and($providers[200])->toBe(['link' => null, 'flatrate' => []]);
+    Http::assertSentCount(13);
+});
+
 it('builds a youtube url for the first trailer', function () {
     config(['services.tmdb.token' => 'fake-token']);
     Http::fake(['*/videos*' => Http::response(['results' => [

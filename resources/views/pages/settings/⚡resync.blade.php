@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Risincronizza da TMDB')] class extends Component
-{
+new #[Title('Risincronizza da TMDB')] class extends Component {
     /**
      * Risincronizza tutta la libreria con TMDB: metadati, episodi e piattaforme.
      */
@@ -32,8 +31,8 @@ new #[Title('Risincronizza da TMDB')] class extends Component
         Artisan::call('movies:sync', ['--all' => true]);
 
         $providers = app(WatchProviders::class);
-        Show::whereNotNull('tmdb_id')->get()->each(fn (Show $show) => $providers->forShow($show, force: true));
-        Movie::whereNotNull('tmdb_id')->get()->each(fn (Movie $movie) => $providers->forMovie($movie, force: true));
+        $providers->refreshShows(Show::whereNotNull('tmdb_id')->get());
+        $providers->refreshMovies(Movie::whereNotNull('tmdb_id')->get());
 
         Flux::toast(variant: 'success', text: __('Libreria risincronizzata da TMDB.'));
     }
