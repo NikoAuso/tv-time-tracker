@@ -166,6 +166,10 @@ return [
         '*_PASSWORD',
         'DB_USERNAME',
         'TMDB_TOKEN',
+        // Servono solo al build sul PC, non all'app.
+        'ANDROID_KEYSTORE_FILE',
+        'ANDROID_KEY_ALIAS',
+        'NATIVEPHP_ANDROID_SDK_LOCATION',
     ],
 
     /*
