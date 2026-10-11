@@ -186,6 +186,10 @@ return [
         'storage/framework/views/*.php',
         'storage/logs/laravel.log',
         'database/database.sqlite',
+        // Export GDPR di TV Time, memoria e config di Claude: dati personali, mai dentro l'APK.
+        'docs',
+        '.claude',
+        '.mcp.json',
     ],
 
     /*
