@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 1991b9e9-15cc-4742-9496-519416d29eb7
+  modified: 2026-10-11T15:52:44.878Z
 ---
 
 Nel runtime Android di NativePHP Mobile (3.3.6) il `WebChromeClient` in
@@ -19,8 +20,9 @@ non ha nemmeno un document picker nativo per file generici (solo `Camera::pickIm
 
 **Why:** `nativephp/` e' gitignorata (`*`) e viene rigenerata da `php artisan native:install`,
 che cancella la patch. Per questo la modifica e' salvata come `docs/android-filechooser.patch`
-+ script idempotente `docs/patch-android-filechooser.sh`. NB: anche `/docs/*` e' gitignorato
-(file locali, non in git), coerente con gli altri script di build/deploy in `docs/`.
++ script idempotente `docs/patch-android-filechooser.sh` (versionati in git, accanto agli
+altri script di build/deploy in `docs/`). NativePHP 4.6 non ha ancora un file chooser
+nativo, quindi la patch servirebbe anche dopo un eventuale upgrade.
 
 Verificata sull'emulatore Pixel_7 (2026-07-14): tap sul campo import apre il document
 picker di sistema, filtro `accept` rispettato, e l'import backup `.json` completa col

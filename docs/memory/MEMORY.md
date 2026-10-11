@@ -8,5 +8,5 @@
 - [Build Android richiede JDK 17](android-build-needs-jdk17.md) — il java di sistema è 25, incompatibile col Kotlin di NativePHP; deploy-android.sh auto-seleziona un JDK 17/21
 - [Pint: niente static_lambda](pint-no-static-lambda-pest.md) — rompe i test Pest; pint.json resta solo preset laravel
 - [Migration on-update](on-device-migrations-on-update.md) — su update le migration girano solo se bumpi la versione nel .env; il DB persiste, dati salvi
-- [TvTimeTracker](tvtimetracker-project.md) — app personale tipo TV Time, target mobile Android via NativePHP, stack/decisioni e stato avanzamento
+- [TvTimeTracker](tvtimetracker-project.md) — decisioni non ovvie (NativePHP resta 3.x, notifiche locali a pagamento), trappole on-device, backlog
 - [.env bloccato](env-access-blocked.md) — Claude non legge/modifica .env: il bump versione per le release lo fa l'utente
