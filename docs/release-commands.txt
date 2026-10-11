@@ -27,14 +27,20 @@ gh release view v1.0.0 --web
 # 1) Incrementa la versione nel .env
 #    NATIVEPHP_APP_VERSION=X.Y.Z      (il version_code si auto-incrementa)
 
-# 2) Build pubblico (app vuota, senza dati personali) + firma
+# 2) Build pubblico (app vuota, senza dati personali) + firma (serve JDK 17/21)
 mv database/seed.sqlite /tmp/seed-personale.sqlite
-php artisan native:package android --build-type=release
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 php artisan native:package android --no-interaction
 mv /tmp/seed-personale.sqlite database/seed.sqlite
 
 # 3) Copia l'APK con nome versionato
 cp nativephp/android/app/build/outputs/apk/release/app-release.apk ~/tvtimetracker-vX.Y.Z.apk
 
-# 4) Pubblica
+# 4) Verifica il contenuto: il bundle ignora .gitignore e copia tutta la root.
+#    Il grep deve uscire VUOTO (niente export TV Time, DB, config di Claude).
+unzip -p ~/tvtimetracker-vX.Y.Z.apk assets/laravel_bundle.zip > /tmp/bundle.zip
+unzip -l /tmp/bundle.zip | grep -E 'docs/|\.sqlite|\.claude|\.mcp\.json'
+apksigner verify --print-certs ~/tvtimetracker-vX.Y.Z.apk
+
+# 5) Pubblica
 git push
 gh release create vX.Y.Z ~/tvtimetracker-vX.Y.Z.apk --title "TvTimeTracker vX.Y.Z" --notes "..."
