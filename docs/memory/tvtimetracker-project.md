@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: project
   originSessionId: ed809246-a8ce-4375-9191-d54c4d01216f
-  modified: 2026-10-11T15:52:35.257Z
+  modified: 2026-10-11T16:15:22.270Z
 ---
 
-Ricrea TV Time (chiuso il 2026-07-15) per **uso personale**, partendo dall'export GDPR in `docs/Dati TV Time` (CSV, mai committati). App Android on-device via NativePHP Mobile, codice pubblico su GitHub, APK firmati nelle release. Rilasciate v1.0.0 (2026-07-07), v1.1.0 (2026-08-29), v1.2.0 (2026-10-04).
+Ricrea TV Time (chiuso il 2026-07-15) per **uso personale**, partendo dall'export GDPR in `docs/Dati TV Time` (CSV, mai committati). App Android on-device via NativePHP Mobile, codice pubblico su GitHub, APK firmati nelle release. Rilasciate v1.0.0 (2026-07-07), v1.1.0 (2026-08-29), v1.2.0 (2026-10-04), v1.2.1 (2026-10-11). Le release fino a v1.2.0 non hanno più l'APK allegato (rimosso il 2026-10-11 perché conteneva dati personali, vedi [[strip-personal-data-before-push-release]]): l'unico APK scaricabile è quello dell'ultima release.
 
 **Decisioni non ovvie:**
 - Gli `s_id`/`tv_show_id` dell'export sono **ID TheTVDB**, non TMDB: si risolvono con `/find/{id}?external_source=tvdb_id`.
