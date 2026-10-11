@@ -8,7 +8,8 @@ Gira come app Android via NativePHP: PHP e SQLite viaggiano dentro l'APK, **non 
 
 - Niente queue worker, cache Redis, cron o storage remoto: tutto ciò che presuppone un processo esterno all'app non è disponibile.
 - SQLite è l'unico database.
-- Build ed esecuzione con i comandi `native:*` (`native:run android`, `native:build --release`), non `artisan serve`.
+- Build ed esecuzione con i comandi `native:*` (`native:run android`, `native:package android` per l'APK firmato; `native:build` è solo iOS), non `artisan serve`.
+- Il bundle Android copia tutta la root del progetto e ignora `.gitignore`: ogni file con dati personali o locali va escluso in `cleanup_exclude_files` di `config/nativephp.php`.
 - La cartella `nativephp/` è generata da `native:install` ed è gitignorata: non modificarne il contenuto a mano, le modifiche verrebbero perse.
 
 ## Migration: append-only

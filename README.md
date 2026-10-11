@@ -63,14 +63,14 @@ Prerequisiti: **PHP 8.4+**, **Composer**, **Node** con npm (Vite 8), `sqlite3` d
 
 ```bash
 composer setup       # install, .env, key:generate, migrate, npm install e build
-composer dev         # ambiente di sviluppo completo (`php artisan dev`)
+composer dev         # server su http://localhost:8006 + Vite su 5186 (`php artisan dev`)
 ```
 
 In alternativa, i due processi separati:
 
 ```bash
-npm run dev          # asset in watch
-php artisan serve    # http://localhost:8000
+npm run dev -- --port=5186         # asset in watch
+php artisan serve --port=8006      # http://localhost:8006
 ```
 
 In sviluppo l'app gira nel browser, non on-device.
@@ -126,10 +126,12 @@ Build ed esecuzione tramite i comandi `native:*` di NativePHP:
 ```bash
 php artisan native:run android          # debug su emulatore/device
 php artisan native:credentials          # genera il keystore per la firma
-php artisan native:build --release       # APK firmato
+php artisan native:package android      # APK firmato (release)
 ```
 
-I build di release non imbarcano `TMDB_TOKEN` (escluso via `cleanup_env_keys`): ogni utente inserisce il proprio.
+Il build Gradle richiede un JDK 17 o 21: con Java più recenti il compilatore Kotlin fallisce, quindi va impostato `JAVA_HOME` di conseguenza.
+
+I build di release non imbarcano `TMDB_TOKEN` (escluso via `cleanup_env_keys`): ogni utente inserisce il proprio. Il bundle copia l'intera root del progetto ignorando `.gitignore`: quello che non deve finire nell'APK va escluso in `cleanup_exclude_files` (`config/nativephp.php`). Per un APK da distribuire, sposta prima `database/seed.sqlite`, così l'app parte vuota.
 
 ## Aggiornare l'app senza perdere i dati
 
