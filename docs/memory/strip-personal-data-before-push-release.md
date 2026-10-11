@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 3058a70b-1b85-4d9d-aeaa-56f870269519
+  modified: 2026-10-11T15:57:18.876Z
 ---
 
 Ogni push su GitHub o release/build distribuibile dell'app NON deve contenere i dati personali dell'utente: la libreria TV Time reale, il token TMDB, l'email.
@@ -14,5 +15,7 @@ Ogni push su GitHub o release/build distribuibile dell'app NON deve contenere i 
 **How to apply:**
 - **Push GitHub:** verificare che `database/*.sqlite` restino gitignored (mai `git add` forzato) e che nessun asset committato mostri token/email in chiaro (oscurare le zone, come fatto per gli screenshot della guida TMDB).
 - **Release/build APK pubblico:** spostare via `database/seed.sqlite` prima di `native:build --release` (la migration `seed_library_from_bundle` fa `is_file($seed)` → assente = no-op → app vuota), poi **ripristinare il file** in locale per i build personali. `TMDB_TOKEN` è già escluso dai build via `cleanup_env_keys`.
+
+- **Il bundle Android copia tutta la root del progetto e ignora `.gitignore`.** Gli APK v1.0.0, v1.1.0 e v1.2.0 pubblicati contenevano `docs/Dati TV Time/` (export GDPR grezzo: email, IP, token di sessione), `.claude/` e docs/memory; la v1.0.0 anche `database/seed.sqlite` con la libreria. Scoperto il 2026-10-11, risolto aggiungendo `docs`, `.claude`, `.mcp.json` a `cleanup_exclude_files` in `config/nativephp.php` (con test `NativeBundleTest`). Prima di pubblicare un APK, controllare sempre: `unzip -p <apk> assets/laravel_bundle.zip > /tmp/b.zip && unzip -l /tmp/b.zip | grep -E 'docs/|sqlite|\.claude'` deve uscire vuoto.
 
 Il flusso "build pubblico → poi riporta i dati in locale" è la norma. Vedi [[seed-sqlite-workflow]] e [[native-run-tty-workaround]].
